@@ -5,6 +5,7 @@ export default function AuthLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" screenOptions={{ headerShown: false }} />
+      <Stack.Screen name="index2" screenOptions={{ headerShown: false }} />
       <Stack.Screen name="login" screenOptions={{ headerShown: false }} />
       <Stack.Screen name="signup" screenOptions={{ headerShown: false }} />
       <Stack.Screen name="signup2" screenOptions={{ headerShown: false }} />

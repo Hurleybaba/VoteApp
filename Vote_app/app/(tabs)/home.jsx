@@ -1,4 +1,5 @@
 import { Link } from "expo-router";
+import { useEffect, useState } from "react";
 
 import {
   Image,
@@ -12,8 +13,21 @@ import {
 import image from "@/assets/images/download.jpg";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Home() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userData = await AsyncStorage.getItem("user");
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
     <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
       <StatusBar
@@ -29,7 +43,11 @@ export default function Home() {
           <View>
             <Text style={styles.welcomeText}>
               Welcome,
-              <Text style={styles.user}> User</Text>
+              {user ? (
+                <Text style={styles.user}>{user.username}</Text>
+              ) : (
+                <Text>Loading...</Text>
+              )}
             </Text>
           </View>
         </View>

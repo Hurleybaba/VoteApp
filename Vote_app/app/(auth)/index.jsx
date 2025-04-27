@@ -1,77 +1,85 @@
+import React, { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import {
+  ActivityIndicator,
   View,
-  Text,
   StyleSheet,
-  Image,
-  TouchableOpacity,
+  SafeAreaView,
   StatusBar,
 } from "react-native";
-import React from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-
-import voteImg from "../../assets/images/Voting-amico.png";
-import Button from "../../components/button";
-import Privacy from "../../components/privacy";
 
 export default function index() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
-      <Image source={voteImg} style={{ width: 300, height: 300 }} />
-      <Text style={styles.title}>Let's get Started!</Text>
-      <Text style={styles.subtitle}>Let's get you into your account</Text>
-      <Button
-        text="Sign Up"
-        handlePress={() => {
-          // router.push("/(election)/123");
-          // router.push("/(tabs)/home");
-          router.push("/signup");
-        }}
-        textStyle={{ color: "white" }}
-      />
-      <Button
-        text="Log in"
-        handlePress={() => {
-          router.push("/login");
-        }}
-        buttonStyle={{
-          backgroundColor: "white",
-          borderWidth: 1,
-          borderColor: "#E8612D",
-        }}
-        textStyle={{ color: "#E8612D" }}
-      />
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const token = await AsyncStorage.getItem("token");
 
-      {/* <Privacy /> */}
-    </SafeAreaView>
-  );
+      if (token) {
+        try {
+          // Make a request to check if the token is valid
+          const response = await axios.get(
+            "http://192.168.8.100:3000/api/auth/getUser",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+
+          console.log(response);
+
+          if (response.status === 200) {
+            // If the token is valid, navigate to the home screen
+            router.push("/(tabs)/home");
+          } else {
+            // If the token is invalid, navigate to the login page
+            router.push("/index2");
+          }
+        } catch (error) {
+          console.error("Error verifying token:", error);
+          // If there was an error (e.g., token expired), navigate to the login page
+          if (error.response && error.response.status === 401) {
+            router.push("/index2");
+          } else {
+            router.push("/index2");
+          }
+        }
+      } else {
+        // If no token exists, navigate to the login page
+        router.push("/index2");
+      }
+
+      setLoading(false); // Done checking login status
+    };
+
+    checkLoginStatus();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="transparent"
+          translucent
+        />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#E8612D" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return null; // No UI if we're redirecting
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loaderContainer: {
     flex: 1,
-    width: "100%",
-    paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "medium",
-    paddingTop: 20,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#868686",
-    paddingVertical: 8,
+    backgroundColor: "white",
   },
 });

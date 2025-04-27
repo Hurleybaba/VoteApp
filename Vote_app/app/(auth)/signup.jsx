@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  Keyboard,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,40 +18,44 @@ import Button from "../../components/button";
 import { useFormStore } from "../../components/store";
 
 export default function signup() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [middleName, setMiddleName] = useState("");
+  const [firstname, setFirstname] = useState("");
+  const [lastname, setLastname] = useState("");
+  const [middlename, setMiddlename] = useState("");
   const [username, setUsername] = useState("");
+  const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
-  const [number, setNumber] = useState("");
+  const [phone, setPhone] = useState("");
   const [isFilled, setIsFilled] = useState(false);
 
   const setFormData = useFormStore((state) => state.setFormData);
   const formData = useFormStore((state) => state.formData);
 
   const handleSubmit = () => {
+    Keyboard.dismiss();
     setFormData({
-      firstName,
-      lastName,
-      middleName,
+      firstname,
+      lastname,
+      middlename,
+      age,
       username,
       email,
-      number,
+      phone,
     });
 
     console.log(formData);
     // Example: Navigate to the next screen
-    router.push("/signup2");
+    router.push("/signup3");
   };
 
   const checkInputFilled = () => {
     if (
-      firstName.trim() === "" ||
-      lastName.trim() === "" ||
-      middleName.trim() === "" ||
+      firstname.trim() === "" ||
+      lastname.trim() === "" ||
+      middlename.trim() === "" ||
+      age.trim() === "" ||
       username.trim() === "" ||
       email.trim() === "" ||
-      number.trim() === ""
+      phone.trim() === ""
     ) {
       setIsFilled(false);
     } else {
@@ -60,7 +65,7 @@ export default function signup() {
 
   useEffect(() => {
     checkInputFilled();
-  }, [firstName, lastName, middleName, username, email, number]);
+  }, [firstname, lastname, middlename, age, username, email, phone]);
 
   const router = useRouter();
 
@@ -92,23 +97,30 @@ export default function signup() {
           <Input
             name="First Name"
             placeholder="Ex. John"
-            value={firstName}
-            onChangeText={setFirstName}
+            value={firstname}
+            onChangeText={setFirstname}
             keyboardType="default"
           />
           <Input
             name="Last Name"
             placeholder="Ex. Doe"
-            value={lastName}
-            onChangeText={setLastName}
+            value={lastname}
+            onChangeText={setLastname}
             keyboardType="default"
           />
           <Input
             name="Middle Name"
             placeholder="Ex. Smith"
-            value={middleName}
-            onChangeText={setMiddleName}
+            value={middlename}
+            onChangeText={setMiddlename}
             keyboardType="default"
+          />
+          <Input
+            name="Age"
+            placeholder="23"
+            value={age}
+            onChangeText={setAge}
+            keyboardType="numeric"
           />
           <Input
             name="Preferred Username"
@@ -127,8 +139,8 @@ export default function signup() {
           <Input
             name="Phone Number"
             placeholder="070XXXXXXXX"
-            value={number}
-            onChangeText={setNumber}
+            value={phone}
+            onChangeText={setPhone}
             keyboardType="numeric"
           />
         </ScrollView>
