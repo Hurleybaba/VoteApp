@@ -8,6 +8,8 @@ export default function Input({
   value,
   onChangeText,
   keyboardType,
+  error,
+  showErrors,
 }) {
   return (
     <View style={styles.outerContainer}>
@@ -24,9 +26,10 @@ export default function Input({
         keyboardType={keyboardType}
         autoCapitalize="none"
         autoCorrect={false}
-        style={styles.input}
+        style={[styles.input, showErrors && error && styles.inputError]}
         placeholderTextColor="#868686"
       />
+      {showErrors && error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
@@ -46,6 +49,15 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     // borderRadius: 4,
     fontSize: 16,
+    paddingVertical: 8,
     // marginTop: 5,
+  },
+  inputError: {
+    borderColor: "red", // Red border for error state
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
   },
 });

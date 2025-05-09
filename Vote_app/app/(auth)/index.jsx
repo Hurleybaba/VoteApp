@@ -9,9 +9,11 @@ import {
   SafeAreaView,
   StatusBar,
 } from "react-native";
+import { baseUrl } from "../baseUrl";
 
 export default function index() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,14 +23,9 @@ export default function index() {
       if (token) {
         try {
           // Make a request to check if the token is valid
-          const response = await axios.get(
-            "http://192.168.8.100:3000/api/auth/getUser",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-
-          console.log(response);
+          const response = await axios.get(`${baseUrl}/api/auth/user`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
           if (response.status === 200) {
             // If the token is valid, navigate to the home screen
@@ -45,6 +42,7 @@ export default function index() {
           } else {
             router.push("/index2");
           }
+          await AsyncStorage.removeItem("token");
         }
       } else {
         // If no token exists, navigate to the login page

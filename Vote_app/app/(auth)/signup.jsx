@@ -7,15 +7,20 @@ import {
   Platform,
   StatusBar,
   Keyboard,
+  ActivityIndicator,
+  View,
+  Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import axios from "axios";
 
 import Input from "../../components/input";
 import Button from "../../components/button";
 import { useFormStore } from "../../components/store";
+import { baseUrl } from "../baseUrl";
 
 export default function signup() {
   const [firstname, setFirstname] = useState("");
@@ -25,49 +30,138 @@ export default function signup() {
   const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  const router = useRouter();
+
+  const { setFormData, setPinId } = useFormStore();
+
+  // Form state
+
+  //Form Validation
+  const [error, setError] = useState({});
+  const [showErrors, setShowErrors] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
   const [isFilled, setIsFilled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSent, setIsSent] = useState(false);
 
-  const setFormData = useFormStore((state) => state.setFormData);
-  const formData = useFormStore((state) => state.formData);
-
-  const handleSubmit = () => {
-    Keyboard.dismiss();
-    setFormData({
-      firstname,
-      lastname,
-      middlename,
-      age,
-      username,
-      email,
-      phone,
-    });
-
-    console.log(formData);
-    // Example: Navigate to the next screen
-    router.push("/signup3");
+  const checkIfFilled = () => {
+    if (
+      firstname.trim() &&
+      lastname.trim() &&
+      middlename.trim() &&
+      age.trim() &&
+      username.trim() &&
+      email.trim() &&
+      phone.trim()
+    ) {
+      setIsFilled(true);
+    } else {
+      setIsFilled(false);
+    }
   };
 
-  const checkInputFilled = () => {
-    if (
-      firstname.trim() === "" ||
-      lastname.trim() === "" ||
-      middlename.trim() === "" ||
-      age.trim() === "" ||
-      username.trim() === "" ||
-      email.trim() === "" ||
-      phone.trim() === ""
-    ) {
-      setIsFilled(false);
-    } else {
-      setIsFilled(true);
+  const validateForm = () => {
+    let newErrors = {};
+    let isValid = true;
+
+    if (!firstname.trim()) {
+      newErrors.firstname = "First name is required";
+      isValid = false;
+    }
+    if (!lastname.trim()) {
+      newErrors.lastname = "Last name is required";
+      isValid = false;
+    }
+    if (!middlename.trim()) {
+      newErrors.middlename = "Middle name is required";
+      isValid = false;
+    }
+    if (!age.trim()) {
+      newErrors.age = "Age is required";
+      isValid = false;
+    } else if (isNaN(age)) {
+      newErrors.age = "Age must be a number";
+      isValid = false;
+    }
+    if (!username.trim()) {
+      newErrors.username = "Username is required";
+      isValid = false;
+    }
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Email address is invalid";
+      isValid = false;
+    }
+    if (!phone.trim()) {
+      newErrors.phone = "Phone number is required";
+      isValid = false;
+    } else if (isNaN(phone)) {
+      newErrors.phone = "Phone number must be a number";
+      isValid = false;
+    } else if (phone.length !== 11) {
+      newErrors.phone = "Phone number must be exactly 11 digits";
+      isValid = false;
+    }
+    setError(newErrors);
+    setIsFormValid(isValid);
+    return isValid;
+  };
+
+  const formatNumber = (number) => {
+    number = number.trim().replace(/[^0-9]/g, ""); // Remove non-numeric characters
+
+    if (number.startsWith("0")) {
+      return "+234" + number.slice(1); // Replace leading 0 with +234
+    }
+  };
+
+  const handleSubmit = async () => {
+    Keyboard.dismiss();
+    setShowErrors(true);
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError({});
+
+    setFormData({
+      firstname: firstname.trim(),
+      lastname: lastname.trim(),
+      middlename: middlename.trim(),
+      age: age.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+    });
+
+    const formattedPhone = formatNumber(phone.trim());
+
+    try {
+      const res = await axios.post(`${baseUrl}/api/auth/sendOTP`, {
+        number: formattedPhone,
+      });
+      setPinId(res.data.pinId);
+      setIsSent(true);
+      Alert.alert("OTP Sent", "Check your phone for the code.");
+
+      router.push("/signup2");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to send OTP.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    checkInputFilled();
+    checkIfFilled();
+    validateForm();
   }, [firstname, lastname, middlename, age, username, email, phone]);
-
-  const router = useRouter();
 
   return (
     <KeyboardAvoidingView
@@ -100,6 +194,8 @@ export default function signup() {
             value={firstname}
             onChangeText={setFirstname}
             keyboardType="default"
+            error={error.firstname}
+            showErrors={showErrors}
           />
           <Input
             name="Last Name"
@@ -107,6 +203,8 @@ export default function signup() {
             value={lastname}
             onChangeText={setLastname}
             keyboardType="default"
+            error={error.lastname}
+            showErrors={showErrors}
           />
           <Input
             name="Middle Name"
@@ -114,6 +212,8 @@ export default function signup() {
             value={middlename}
             onChangeText={setMiddlename}
             keyboardType="default"
+            error={error.middlename}
+            showErrors={showErrors}
           />
           <Input
             name="Age"
@@ -121,6 +221,8 @@ export default function signup() {
             value={age}
             onChangeText={setAge}
             keyboardType="numeric"
+            error={error.age}
+            showErrors={showErrors}
           />
           <Input
             name="Preferred Username"
@@ -128,6 +230,8 @@ export default function signup() {
             value={username}
             onChangeText={setUsername}
             keyboardType="default"
+            error={error.username}
+            showErrors={showErrors}
           />
           <Input
             name="Email"
@@ -135,6 +239,8 @@ export default function signup() {
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
+            error={error.email}
+            showErrors={showErrors}
           />
           <Input
             name="Phone Number"
@@ -142,27 +248,27 @@ export default function signup() {
             value={phone}
             onChangeText={setPhone}
             keyboardType="numeric"
+            error={error.phone}
+            showErrors={showErrors}
           />
         </ScrollView>
         <Button
-          text="Continue"
-          disabled={!isFilled}
-          buttonStyle={
-            isFilled
-              ? {
-                  position: "absolute",
-                  bottom: 20,
-                  marginLeft: 20,
-                }
-              : {
-                  backgroundColor: "#DADADA",
-                  position: "absolute",
-                  bottom: 20,
-                  marginLeft: 20,
-                  width: "105%",
-                  left: "-2.5%",
-                }
+          text={
+            isLoading ? (
+              <ActivityIndicator
+                size="small"
+                color="#E8612D"
+                style={styles.loader}
+              />
+            ) : (
+              "Continue"
+            )
           }
+          disabled={!isFilled || isLoading}
+          buttonStyle={[
+            styles.button,
+            (!isFilled || isLoading) && styles.buttonDisabled,
+          ]}
           handlePress={handleSubmit}
         />
       </SafeAreaView>
@@ -189,5 +295,18 @@ const styles = StyleSheet.create({
     fontWeight: "light",
     marginBottom: 10,
     color: "gray",
+  },
+  button: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "#E8612D",
+  },
+  buttonDisabled: {
+    backgroundColor: "#DADADA",
+  },
+  loader: {
+    alignSelf: "center",
   },
 });

@@ -4,7 +4,9 @@ import {
   logoutUser,
   registerUser,
   getUser,
-} from "../middlewares/authControllers.js";
+  sendOTP,
+  verifyOTP,
+} from "../controllers/authControllers.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 
 const router = express.Router();
@@ -12,7 +14,8 @@ const router = express.Router();
 router.post("/signup", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
+router.post("/sendOTP", sendOTP);
+router.post("/verifyOTP", verifyOTP);
 router.get("/user", verifyToken, getUser);
-router.get("/news", verifyToken, getUser);
 
 export default router;

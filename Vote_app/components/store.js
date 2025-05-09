@@ -12,6 +12,10 @@ export const useFormStore = create((set) => ({
     password: "",
   },
 
+  pinId: null,
+
+  setPinId: (newPinId) => set({ pinId: newPinId }),
+
   setFormData: (newData) =>
     set((state) => ({ formData: { ...state.formData, ...newData } })),
 }));

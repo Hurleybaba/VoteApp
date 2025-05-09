@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  Modal,
+  View,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,11 +19,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Input from "../../components/input";
 import Button from "../../components/button";
 import { useFormStore } from "../../components/store";
+import { baseUrl } from "../baseUrl";
 
 export default function signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isFilled, setIsFilled] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
   const [error, setError] = useState("");
 
   const setFormData = useFormStore((state) => state.setFormData);
@@ -35,24 +39,29 @@ export default function signup() {
 
     try {
       const response = await axios.post(
-        "http://192.168.8.100:3000/api/auth/signup",
+        `${baseUrl}/api/auth/signup`,
         userDetails
       );
+      console.log("Response:", response);
       if (response.status === 200 || response.status === 201) {
         console.log("Data successfully sent to the server");
 
-        const { token, user } = response.data;
+        const { token } = response.data;
 
         // Store the token in AsyncStorage
         await AsyncStorage.setItem("token", token);
-        await AsyncStorage.setItem("user", JSON.stringify(user));
 
-        router.push("/(tabs)/home");
+        setShowPopup(true);
+
+        setTimeout(() => {
+          setShowPopup(false);
+          router.replace("/login");
+        }, 3000);
       } else {
         console.error("Error sending data to the server");
       }
     } catch (error) {
-      setError(error);
+      // setError(error);
       console.error("Error sending data:", error);
     }
   };
@@ -133,6 +142,22 @@ export default function signup() {
           }
           handlePress={handleSubmit}
         />
+        <Modal visible={showPopup} transparent animationType="fade">
+          <View style={styles.popupContainer}>
+            <View style={styles.popup}>
+              <Text style={styles.popupText}>
+                Registration Success! Please wait while we redirect you to the
+                login page.{" "}
+                <Ionicons
+                  name="checkmark-done-outline"
+                  size={24}
+                  color="green"
+                  style={styles.backIcon}
+                />
+              </Text>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -157,5 +182,22 @@ const styles = StyleSheet.create({
     fontWeight: "light",
     marginBottom: 10,
     color: "gray",
+  },
+  popupContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  popup: {
+    backgroundColor: "white",
+    padding: 30,
+    borderRadius: 10,
+    elevation: 10,
+  },
+  popupText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "green",
   },
 });

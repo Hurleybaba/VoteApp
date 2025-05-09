@@ -1,14 +1,4 @@
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableWithoutFeedback,
-  TouchableOpacity,
-  View,
-  StatusBar,
-} from "react-native";
-import image from "@/assets/images/download.jpg";
+import { ScrollView, StyleSheet, Text, View, StatusBar } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";

@@ -9,24 +9,83 @@ import {
   TouchableOpacity,
   View,
   StatusBar,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import image from "@/assets/images/download.jpg";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { baseUrl } from "../baseUrl";
+
+import axios from "axios";
+import { useRouter } from "expo-router";
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const userData = await AsyncStorage.getItem("user");
-      if (userData) {
-        setUser(JSON.parse(userData));
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const checkLoginStatusAndFetchUser = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      router.replace("/index2");
+      return;
+    }
+    try {
+      const response = await axios.get(`${baseUrl}/api/auth/user`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        setUser(response.data); // Set response.data instead of whole response
+      } else {
+        throw new Error("Failed to fetch user data");
       }
-    };
-    fetchUser();
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      setError(error.message);
+
+      // Clear invalid token and redirect
+      await AsyncStorage.removeItem("token");
+      router.replace("/index2");
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    checkLoginStatusAndFetchUser();
+  };
+
+  useEffect(() => {
+    checkLoginStatusAndFetchUser();
   }, []);
+
+  console.log(user);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#E8612D" />
+      </SafeAreaView>
+    );
+  }
+  if (error) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={fetchUserData}>
+          <Text style={styles.retryText}>Try Again</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
@@ -35,18 +94,29 @@ export default function Home() {
         backgroundColor="transparent"
         translucent
       />
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#E8612D"]}
+            tintColor="#E8612D"
+          />
+        }
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.box1}>
           <View style={styles.circle}>
             <Image source={image} style={styles.image} />
           </View>
           <View>
             <Text style={styles.welcomeText}>
-              Welcome,
+              Welcome,{" "}
               {user ? (
                 <Text style={styles.user}>{user.username}</Text>
               ) : (
-                <Text>Loading...</Text>
+                <Text> Loading...</Text>
               )}
             </Text>
           </View>
@@ -233,5 +303,25 @@ const styles = StyleSheet.create({
   },
   moreText: {
     fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    color: "red",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  retryText: {
+    color: "#E8612D",
+    fontWeight: "bold",
   },
 });
