@@ -12,10 +12,14 @@ export const useFormStore = create((set) => ({
     password: "",
   },
 
-  pinId: null,
-
-  setPinId: (newPinId) => set({ pinId: newPinId }),
+  otpData: {
+    otp: "",
+    email: "",
+  },
 
   setFormData: (newData) =>
     set((state) => ({ formData: { ...state.formData, ...newData } })),
+
+  setOtpData: (newData) =>
+    set((state) => ({ otpData: { ...state.otpData, ...newData } })),
 }));

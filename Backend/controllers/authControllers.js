@@ -1,7 +1,11 @@
 import pool from "../database.js";
 import bcrypt from "bcrypt";
 import generateToken from "../Utils/generateToken.js";
+import { sendOtpEmail } from "../sendMail.js";
 import axios from "axios";
+
+// Temporary in-memory storage (use database in production)
+const otpStorage = new Map();
 
 export const registerUser = async (req, res) => {
   try {
@@ -135,103 +139,64 @@ export const loginUser = async (req, res) => {
 
 export const logoutUser = async (req, res) => {};
 
-export const sendOTP = async (req, res) => {
-  const TERMII_API_KEY = process.env.TERMII_API_KEY;
-  const { number } = req.body;
-
-  // Validate phone number format
-  if (!number || !/^\+?\d{10,15}$/.test(number)) {
-    return res.status(400).json({ message: "Invalid phone number format" });
+export const sendEmail = async (req, res) => {
+  const email = req.body;
+  if (!email) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required" });
   }
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
+
+  // Store OTP (in production, use a database)
+  otpStorage.set(email, { otp, expiresAt });
 
   try {
-    const response = await axios.post(
-      "https://api.ng.termii.com/api/sms/otp/send",
-      {
-        api_key: TERMII_API_KEY,
-        message_type: "NUMERIC",
-        to: number,
-        from: "VerifySMS", // Changed to your app name
-        channel: "generic",
-        pin_attempts: 5,
-        pin_time_to_live: 5, // 5 minutes
-        pin_length: 6, // Increased to 6 digits for better security
-        pin_placeholder: "< 123456 >",
-        message_text: "Your UniVOTE verification code is < 123456 >",
-        pin_type: "NUMERIC",
-      },
-      {
-        timeout: 10000, // 10 second timeout
-      }
-    );
-
-    console.log("OTP sent to:", number);
-
-    if (response.data?.status === "success") {
-      return res.status(200).json({
-        message: "OTP sent successfully",
-        pinId: response.data.pinId, // send the pinID for security
-      });
-    } else {
-      console.error("Termii API error:", response.data);
-      return res.status(502).json({ message: "OTP service unavailable" });
-    }
+    await sendOtpEmail(email, otp);
+    res.json({ success: true, message: "OTP sent" });
   } catch (error) {
-    console.error("OTP send error:", error.message);
-    return res.status(500).json({
-      message: "Failed to send OTP",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
 
-export const verifyOTP = async (req, res) => {
-  const TERMII_API_KEY = process.env.TERMII_API_KEY;
-  const { pinId, otp } = req.body;
+export const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email and OTP are required" });
+  }
 
   try {
-    const response = await axios.post(
-      "https://api.ng.termii.com/api/sms/otp/verify",
-      {
-        api_key: TERMII_API_KEY,
-        pin_id: pinId,
-        pin: otp,
-      },
-      {
-        timeout: 5000,
-      }
-    );
+    const storedOtpData = otpStorage.get(email);
 
-    if (response.data?.verified === true) {
-      console.log("OTP verified for pinId:", pinId);
-      return res.status(200).json({
-        message: "OTP verified successfully",
-        verified: true,
-      });
-    } else {
-      return res.status(401).json({
-        message: "Invalid OTP",
-        attemptsLeft: response.data?.attempts_remaining || 0,
-      });
+    if (!storedOtpData) {
+      return res
+        .status(404)
+        .json({ success: false, message: "OTP not found or expired" });
     }
+
+    const { otp: storedOtp, expiresAt } = storedOtpData;
+
+    // Check if OTP matches and isn't expired
+    if (storedOtp !== otp || new Date() > new Date(expiresAt)) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid or expired OTP" });
+    }
+
+    // Clear OTP after successful verification
+    otpStorage.delete(email);
+
+    res.json({ success: true, message: "OTP verified successfully" });
   } catch (error) {
-    console.error(
-      "OTP verification error:",
-      error.response?.data || error.message
-    );
-
-    if (error.response?.status === 400) {
-      return res.status(400).json({
-        message: "Invalid OTP or expired",
-        details: error.response.data?.message,
-      });
-    }
-
-    return res.status(500).json({
+    console.error("OTP verification error:", error);
+    res.status(500).json({
+      success: false,
       message: "OTP verification failed",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

@@ -4,8 +4,8 @@ import {
   logoutUser,
   registerUser,
   getUser,
-  sendOTP,
-  verifyOTP,
+  sendEmail,
+  verifyOtp,
 } from "../controllers/authControllers.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 
@@ -14,8 +14,8 @@ const router = express.Router();
 router.post("/signup", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
-router.post("/sendOTP", sendOTP);
-router.post("/verifyOTP", verifyOTP);
+router.post("/verifyOtp", verifyOtp);
+router.post("/sendEmail", sendEmail);
 router.get("/user", verifyToken, getUser);
 
 export default router;

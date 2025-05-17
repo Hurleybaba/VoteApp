@@ -25,7 +25,7 @@ export default function signup2() {
   const [otp, setOtp] = useState(["", "", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
-  const { pinId } = useFormStore();
+  const { otpData, formData, setFormData, setOtpData } = useFormStore();
 
   const handleChange = (text, index) => {
     if (text.length > 1) text = text[text.length - 1]; // Only allow 1 digit
@@ -58,15 +58,24 @@ export default function signup2() {
   const resendOtp = async () => {
     try {
       setIsLoading(true);
-      const phoneNumber = useFormStore.getState().formData.phone;
-      const res = await axios.post(`${baseUrl}/api/auth/sendOTP`, {
-        phoneNumber,
+      setOtp(["", "", "", "", ""]); // Clear current OTP
+      setTimer(60);
+
+      const res = await axios.post(`${baseUrl}/api/auth/sendEmail`, {
+        email: formData.email,
       });
-      setTimer(60); // Reset timer
-      Alert.alert("OTP Resent", "A new OTP has been sent to your phone.");
+
+      if (res.data.success) {
+        Alert.alert("OTP Resent", "A new code has been sent to your email.");
+      } else {
+        Alert.alert("Error", res.data.message || "Failed to resend OTP");
+      }
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to resend OTP.");
+      console.error("Resend OTP error:", err);
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Failed to resend OTP. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -74,23 +83,32 @@ export default function signup2() {
 
   //handle verify OTP
   const verifyOtp = async (otpCode = otp.join("")) => {
+    if (otpCode.length !== 5) {
+      Alert.alert("Error", "Please enter a complete 5-digit code");
+      return;
+    }
     try {
       setIsLoading(true);
-      const res = await axios.post(`${baseUrl}/api/auth/verifyOTP`, {
-        pinId,
+
+      const res = await axios.post(`${baseUrl}/api/auth/verifyOtp`, {
+        email: formData.email,
         otp: otpCode,
       });
 
       if (res.data.verified) {
         setOtpVerified(true);
-        Alert.alert("Success", "Your account has been verified!");
+        Alert.alert("Success", "Your email has been verified!");
         router.push("/signup3"); // Navigate to next screen
       } else {
+        Alert.alert("Error", res.data.message || "Verification failed");
         Alert.alert("Invalid OTP", "The code you entered is incorrect.");
       }
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Verification failed. Please try again.");
+      console.error("OTP verification error:", err);
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Verification failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -143,9 +161,13 @@ export default function signup2() {
         ))}
       </View>
       <Text style={styles.resendText}>
-        You can resend in <Text style={styles.timer}>43</Text> seconds
+        You can resend in <Text style={styles.timer}>{timer}</Text> seconds
       </Text>
-      <Text style={styles.resendCode}>Resend Code</Text>
+      <TouchableOpacity onPress={resendOtp} disabled={timer > 0}>
+        <Text style={[styles.resendCode, timer > 0 && { color: "#ccc" }]}>
+          Resend Code
+        </Text>
+      </TouchableOpacity>
       <Button
         text="Continue"
         disabled={isButtonDisabled}

@@ -33,7 +33,7 @@ export default function signup() {
 
   const router = useRouter();
 
-  const { setFormData, setPinId } = useFormStore();
+  const { setFormData } = useFormStore();
 
   // Form state
 
@@ -43,7 +43,6 @@ export default function signup() {
   const [isFormValid, setIsFormValid] = useState(false);
   const [isFilled, setIsFilled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSent, setIsSent] = useState(false);
 
   const checkIfFilled = () => {
     if (
@@ -139,20 +138,23 @@ export default function signup() {
       phone: phone.trim(),
     });
 
-    const formattedPhone = formatNumber(phone.trim());
-
     try {
-      const res = await axios.post(`${baseUrl}/api/auth/sendOTP`, {
-        number: formattedPhone,
+      const res = await axios.post(`${baseUrl}/api/auth/sendEmail`, {
+        email: email.trim(),
       });
-      setPinId(res.data.pinId);
-      setIsSent(true);
-      Alert.alert("OTP Sent", "Check your phone for the code.");
 
-      router.push("/signup2");
+      if (res.data.success) {
+        Alert.alert("OTP Sent", "Check your email for the verification code.");
+        router.push("/signup2");
+      } else {
+        Alert.alert("Error", res.data.message || "Failed to send OTP");
+      }
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to send OTP.");
+      console.error("OTP send error:", err);
+      Alert.alert(
+        "Error",
+        err.res?.data?.message || "Failed to send OTP. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
