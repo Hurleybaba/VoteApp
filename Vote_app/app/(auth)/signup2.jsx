@@ -7,8 +7,9 @@ import {
   Platform,
   TextInput,
   StatusBar,
+  Keyboard,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -21,8 +22,15 @@ import { Alert } from "react-native";
 
 export default function signup2() {
   const router = useRouter();
-  const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef()];
-  const [otp, setOtp] = useState(["", "", "", "", ""]);
+  const inputRefs = [
+    useRef(),
+    useRef(),
+    useRef(),
+    useRef(),
+    useRef(),
+    useRef(),
+  ];
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
   const { otpData, formData, setFormData, setOtpData } = useFormStore();
@@ -41,7 +49,7 @@ export default function signup2() {
     //auto submit if all inputs are filled
     if (index === inputRefs.length - 1 && text) {
       const fullOtp = newOtp.join("");
-      if (fullOtp.length === 5) {
+      if (fullOtp.length === 6) {
         verifyOtp(fullOtp);
       }
     }
@@ -58,7 +66,7 @@ export default function signup2() {
   const resendOtp = async () => {
     try {
       setIsLoading(true);
-      setOtp(["", "", "", "", ""]); // Clear current OTP
+      setOtp(["", "", "", "", "", ""]); // Clear current OTP
       setTimer(60);
 
       const res = await axios.post(`${baseUrl}/api/auth/sendEmail`, {
@@ -83,8 +91,10 @@ export default function signup2() {
 
   //handle verify OTP
   const verifyOtp = async (otpCode = otp.join("")) => {
-    if (otpCode.length !== 5) {
-      Alert.alert("Error", "Please enter a complete 5-digit code");
+    Keyboard.dismiss();
+    console.log(otp.join(""));
+    if (otpCode.length !== 6) {
+      Alert.alert("Error", "Please enter a complete 6-digit code");
       return;
     }
     try {
@@ -95,8 +105,7 @@ export default function signup2() {
         otp: otpCode,
       });
 
-      if (res.data.verified) {
-        setOtpVerified(true);
+      if (res.data.success) {
         Alert.alert("Success", "Your email has been verified!");
         router.push("/signup3"); // Navigate to next screen
       } else {
@@ -143,8 +152,8 @@ export default function signup2() {
       </TouchableOpacity>
       <Text style={styles.heading}>Enter OTP Code</Text>
       <Text style={styles.subheading}>
-        Check your messages. We’ve sent a five digit OTP code to your number.
-        Enter the coder below to verify your account and continue.
+        Check your messages. We’ve sent a six digit OTP code to {formData.email}
+        . Enter the coder below to verify your account and continue.
       </Text>
       <View style={styles.otpContainer}>
         {otp.map((value, index) => (

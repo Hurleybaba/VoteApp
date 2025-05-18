@@ -52,7 +52,7 @@ export const registerUser = async (req, res) => {
 
     // Insert the new user into the database
     const [result] = await pool.query(
-      "INSERT INTO users (firstname, middlename, lastname, username, age, email, phone, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO users (first_name, middle_name, last_name, username, age, email, phone, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [
         firstname,
         middlename,
@@ -122,10 +122,10 @@ export const loginUser = async (req, res) => {
       token,
       user: {
         id: user[0].userid,
-        firstname: user[0].firstname,
-        middlename: user[0].middlename,
-        lastname: user[0].lastname,
-        username: user[0].username,
+        firstname: user[0].first_name,
+        middlename: user[0].middle_name,
+        lastname: user[0].last_name,
+        username: user[0].user_name,
         age: user[0].age,
         email: user[0].email,
         phone: user[0].phone,
@@ -140,23 +140,34 @@ export const loginUser = async (req, res) => {
 export const logoutUser = async (req, res) => {};
 
 export const sendEmail = async (req, res) => {
-  const email = req.body;
-  if (!email) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Email is required" });
-  }
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
-
-  // Store OTP (in production, use a database)
-  otpStorage.set(email, { otp, expiresAt });
-
   try {
+    const { email } = req.body;
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+    console.log(`Generating OTP for email: ${email}`);
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
+    console.log(`Generated OTP: ${otp}`);
+
+    // Store OTP (in production, use a database)
+    otpStorage.set(email, { otp, expiresAt, attempts: 0 });
+
     await sendOtpEmail(email, otp);
     res.json({ success: true, message: "OTP sent" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to send OTP" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to send OTP from the backend" });
   }
 };
 
@@ -169,28 +180,55 @@ export const verifyOtp = async (req, res) => {
       .json({ success: false, message: "Email and OTP are required" });
   }
 
+  if (!/^\d{6}$/.test(otp)) {
+    return res.status(400).json({
+      success: false,
+      message: "OTP must be 6 digits",
+    });
+  }
+
   try {
     const storedOtpData = otpStorage.get(email);
 
     if (!storedOtpData) {
+      console.warn(`OTP not found for email: ${email}`);
       return res
         .status(404)
-        .json({ success: false, message: "OTP not found or expired" });
+        .json({ success: false, message: "OTP invalid or expired" });
     }
 
-    const { otp: storedOtp, expiresAt } = storedOtpData;
+    const { otp: storedOtp, expiresAt, attempts = 0 } = storedOtpData;
 
-    // Check if OTP matches and isn't expired
-    if (storedOtp !== otp || new Date() > new Date(expiresAt)) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid or expired OTP" });
+    if (attempts >= 5) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many attempts. Please request a new OTP.",
+      });
     }
 
-    // Clear OTP after successful verification
-    otpStorage.delete(email);
+    const isOtpValid = storedOtp.toString() === otp.toString();
+    const isExpired = Date.now() > new Date(expiresAt).getTime();
 
-    res.json({ success: true, message: "OTP verified successfully" });
+    if (!isOtpValid || isExpired) {
+      // Update attempt count
+      otpStorage.set(email, {
+        ...storedOtpData,
+        attempts: attempts + 1,
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: isExpired ? "OTP expired" : "Invalid OTP",
+      });
+    }
+
+    otpStorage.delete(email); // Clear OTP after successful verification
+    console.log(`OTP verified for email: ${email}`);
+
+    return res.json({
+      success: true,
+      message: "OTP verified successfully",
+    });
   } catch (error) {
     console.error("OTP verification error:", error);
     res.status(500).json({

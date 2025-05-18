@@ -1,21 +1,58 @@
 import nodemailer from "nodemailer";
-import { configDotenv } from "dotenv";
+import { config } from "dotenv";
+
+config();
 
 const transporter = nodemailer.createTransport({
-  service: "gmail", // or use SMTP
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: process.env.SMTP_PORT || 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.USER,
     pass: process.env.PASS,
   },
 });
 
-export const sendOtpEmail = async (toEmail, otp) => {
-  const mailOptions = {
-    from: process.env.USER,
-    to: toEmail,
-    subject: "Your OTP Code",
-    text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
-  };
+transporter.verify((error) => {
+  if (error) {
+    console.error("SMTP connection error:", error);
+  } else {
+    console.log("Server is ready to send emails");
+  }
+});
 
-  await transporter.sendMail(mailOptions);
+// export const sendOtpEmail = async (toEmail, otp) => {
+//   const mailOptions = {
+//     from: process.env.USER,
+//     to: toEmail,
+//     subject: "Your OTP Code",
+//     text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
+//   };
+
+//   await transporter.sendMail(mailOptions);
+// };
+
+export const sendOtpEmail = async (toEmail, otp) => {
+  try {
+    const mailOptions = {
+      from: `"Your App Name" <${process.env.USER}>`,
+      to: toEmail,
+      subject: "Your OTP Code",
+      text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
+      html: `
+        <div>
+          <h2>Your Verification Code</h2>
+          <p>Your OTP code is: <strong>${otp}</strong></p>
+          <p>This code will expire in 5 minutes.</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Message sent: %s", info.messageId);
+    return true;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw new Error("Failed to send OTP email");
+  }
 };

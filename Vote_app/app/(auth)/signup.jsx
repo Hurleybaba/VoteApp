@@ -139,9 +139,12 @@ export default function signup() {
     });
 
     try {
-      const res = await axios.post(`${baseUrl}/api/auth/sendEmail`, {
-        email: email.trim(),
-      });
+      const res = await axios.post(
+        `http://192.168.8.101:3000/api/auth/sendEmail`,
+        {
+          email: email.trim(),
+        }
+      );
 
       if (res.data.success) {
         Alert.alert("OTP Sent", "Check your email for the verification code.");
@@ -150,11 +153,18 @@ export default function signup() {
         Alert.alert("Error", res.data.message || "Failed to send OTP");
       }
     } catch (err) {
-      console.error("OTP send error:", err);
-      Alert.alert(
-        "Error",
-        err.res?.data?.message || "Failed to send OTP. Please try again."
-      );
+      console.error("Full error:", err);
+      console.error("Error response:", err.response?.data);
+
+      let errorMessage = "Failed to send OTP. Please try again.";
+      if (err.response) {
+        errorMessage =
+          err.response.data?.message || `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = "No response from server. Check your connection.";
+      }
+
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsLoading(false);
     }

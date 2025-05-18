@@ -6,7 +6,7 @@ const generateToken = (userId) => {
   }
 
   const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: "5m",
+    expiresIn: "30m",
   });
 
   // Set the token in a cookie (optional, if you want to use cookies for authentication)

@@ -29,7 +29,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [kycVerified, setKycVerified] = useState(false);
+
   const checkLoginStatusAndFetchUser = async () => {
+    setIsLoading(true);
+    setError(null);
     const token = await AsyncStorage.getItem("token");
 
     if (!token) {
@@ -80,7 +84,10 @@ export default function Home() {
     return (
       <SafeAreaView style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchUserData}>
+        <TouchableOpacity
+          onPress={checkLoginStatusAndFetchUser}
+          style={styles.retryButton}
+        >
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -121,69 +128,115 @@ export default function Home() {
             </Text>
           </View>
         </View>
-        <View style={styles.box2}>
-          <Text style={styles.completeKYC}>Complete your KYC</Text>
-        </View>
+        {!kycVerified && (
+          <TouchableOpacity onPress={() => router.push("/(kyc)/kycpg2")}>
+            <View style={styles.box2}>
+              <Text style={styles.completeKYC}>Complete your KYC</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <Text style={styles.heading}>Ongoing Elections</Text>
-        <View style={styles.collection}>
-          <View style={styles.feed}>
-            <View style={styles.newsfeedDetails}>
-              <Text style={styles.topic}>Vote for Student Representative</Text>
-              <Text style={styles.duration}>April 8th - 10th 8am to 10pm</Text>
-            </View>
+        {!kycVerified ? (
+          <View style={styles.noKycContainer}>
+            <Text style={styles.noKycText}>
+              Complete KYC to view ongoing Elections
+            </Text>
           </View>
-          <View style={styles.feed}>
-            <View style={styles.newsfeedDetails}>
-              <Text style={styles.topic}>Vote for Student Representative</Text>
-              <Text style={styles.duration}>April 8th - 10th 8am to 10pm</Text>
+        ) : (
+          <>
+            <View style={styles.collection}>
+              <View style={styles.feed}>
+                <View style={styles.newsfeedDetails}>
+                  <Text style={styles.topic}>
+                    Vote for Student Representative
+                  </Text>
+                  <Text style={styles.duration}>
+                    April 8th - 10th 8am to 10pm
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.feed}>
+                <View style={styles.newsfeedDetails}>
+                  <Text style={styles.topic}>
+                    Vote for Student Representative
+                  </Text>
+                  <Text style={styles.duration}>
+                    April 8th - 10th 8am to 10pm
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.feed}>
+                <View style={styles.newsfeedDetails}>
+                  <Text style={styles.topic}>
+                    Vote for Student Representative
+                  </Text>
+                  <Text style={styles.duration}>
+                    April 8th - 10th 8am to 10pm
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.feed}>
+                <View style={styles.newsfeedDetails}>
+                  <Text style={styles.topic}>
+                    Vote for Student Representative
+                  </Text>
+                  <Text style={styles.duration}>
+                    April 8th - 10th 8am to 10pm
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-          <View style={styles.feed}>
-            <View style={styles.newsfeedDetails}>
-              <Text style={styles.topic}>Vote for Student Representative</Text>
-              <Text style={styles.duration}>April 8th - 10th 8am to 10pm</Text>
+            <View style={styles.more}>
+              <Link href="/news">
+                <TouchableOpacity style={{ flexDirection: "row", gap: 5 }}>
+                  <Text style={styles.moreText}>See more</Text>
+                  <Ionicons
+                    name="caret-forward-outline"
+                    size={24}
+                    color="#E8612D"
+                  />
+                </TouchableOpacity>
+              </Link>
             </View>
-          </View>
-          <View style={styles.feed}>
-            <View style={styles.newsfeedDetails}>
-              <Text style={styles.topic}>Vote for Student Representative</Text>
-              <Text style={styles.duration}>April 8th - 10th 8am to 10pm</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.more}>
-          <Link href="/news">
-            <TouchableOpacity style={{ flexDirection: "row", gap: 5 }}>
-              <Text style={styles.moreText}>See more</Text>
-              <Ionicons
-                name="caret-forward-outline"
-                size={24}
-                color="#E8612D"
-              />
-            </TouchableOpacity>
-          </Link>
-        </View>
+          </>
+        )}
+
         <Text style={styles.heading}>Upcoming Elections</Text>
-        <View style={styles.collection}>
-          <View style={styles.feed}>
-            <View style={styles.newsfeedDetails}>
-              <Text style={styles.topic}>Vote for Student Representative</Text>
-              <Text style={styles.duration}>April 8th - 10th 8am to 10pm</Text>
-            </View>
+        {!kycVerified ? (
+          <View style={styles.noKycContainer}>
+            <Text style={styles.noKycText}>
+              Complete KYC to view ongoing Elections
+            </Text>
           </View>
-        </View>
-        <View style={styles.more}>
-          <Link href="/news">
-            <TouchableOpacity style={{ flexDirection: "row", gap: 5 }}>
-              <Text style={styles.moreText}>See more</Text>
-              <Ionicons
-                name="caret-forward-outline"
-                size={24}
-                color="#E8612D"
-              />
-            </TouchableOpacity>
-          </Link>
-        </View>
+        ) : (
+          <>
+            <View style={styles.collection}>
+              <View style={styles.feed}>
+                <View style={styles.newsfeedDetails}>
+                  <Text style={styles.topic}>
+                    Vote for Student Representative
+                  </Text>
+                  <Text style={styles.duration}>
+                    April 8th - 10th 8am to 10pm
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.more}>
+              <Link href="/news">
+                <TouchableOpacity style={{ flexDirection: "row", gap: 5 }}>
+                  <Text style={styles.moreText}>See more</Text>
+                  <Ionicons
+                    name="caret-forward-outline"
+                    size={24}
+                    color="#E8612D"
+                  />
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -254,6 +307,22 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 12,
     marginTop: 26,
+  },
+  noKycContainer: {
+    width: "100%",
+    height: 100,
+    borderWidth: 1,
+    marginTop: 20,
+    borderColor: "transparent",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FAB09B",
+  },
+  noKycText: {
+    textAlign: "center",
+    fontSize: 18,
+    color: "white",
   },
   collection: {
     width: "100%",
