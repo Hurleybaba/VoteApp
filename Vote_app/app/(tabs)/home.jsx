@@ -129,7 +129,7 @@ export default function Home() {
           </View>
         </View>
         {!kycVerified && (
-          <TouchableOpacity onPress={() => router.push("/(kyc)/kycpg2")}>
+          <TouchableOpacity onPress={() => router.push(`/${user?._id}/kycpg1`)}>
             <View style={styles.box2}>
               <Text style={styles.completeKYC}>Complete your KYC</Text>
             </View>
