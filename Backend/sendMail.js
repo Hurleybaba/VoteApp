@@ -3,10 +3,20 @@ import { config } from "dotenv";
 
 config();
 
+// const transporter = nodemailer.createTransport({
+//   host: process.env.SMTP_HOST || "smtp.gmail.com",
+//   port: process.env.SMTP_PORT || 587,
+//   secure: false, // true for 465, false for other ports
+//   auth: {
+//     user: process.env.USER,
+//     pass: process.env.PASS,
+//   },
+// });
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: process.env.SMTP_PORT || 587,
-  secure: false, // true for 465, false for other ports
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // true for 465, false for other ports
   auth: {
     user: process.env.USER,
     pass: process.env.PASS,
@@ -20,17 +30,6 @@ transporter.verify((error) => {
     console.log("Server is ready to send emails");
   }
 });
-
-// export const sendOtpEmail = async (toEmail, otp) => {
-//   const mailOptions = {
-//     from: process.env.USER,
-//     to: toEmail,
-//     subject: "Your OTP Code",
-//     text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
-//   };
-
-//   await transporter.sendMail(mailOptions);
-// };
 
 export const sendOtpEmail = async (toEmail, otp) => {
   try {

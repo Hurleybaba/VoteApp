@@ -8,7 +8,7 @@ import { verifyToken } from "../middlewares/verifyToken.js";
 
 const router = express.Router();
 
-router.post("/userid", verifyToken, setFaceData);
+router.post("/:userid", verifyToken, setFaceData);
 router.get("/:userid", verifyToken, getFaceData);
 
 export default router;

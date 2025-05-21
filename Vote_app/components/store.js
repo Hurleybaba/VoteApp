@@ -24,6 +24,10 @@ export const useFormStore = create((set) => ({
     level: "",
   },
 
+  isVerified: false,
+
+  setIsVerified: (isVerified) => set({ isVerified }),
+
   setFormData: (newData) =>
     set((state) => ({ formData: { ...state.formData, ...newData } })),
 

@@ -7,17 +7,38 @@ import {
   Alert,
   Button,
   Platform,
+  TouchableOpacity,
 } from "react-native";
-import { Camera } from "expo-camera";
+import { CameraView, CameraType } from "expo-camera";
+import * as Camera from "expo-camera";
+
+import * as Device from "expo-device";
+
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import * as FileSystem from "expo-file-system";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { baseUrl } from "../baseUrl.js";
 
-const router = useRouter();
+import { useFormStore } from "../../components/store";
 
-const FaceCaptureScreen = () => {
-  const { userid } = router.params;
+export default function kycpg2() {
+  // const { Camera, CameraType } = CameraModule;
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const userid = params.userid;
+
+  const { setIsVerified } = useFormStore();
+
+  if (!userid) {
+    return (
+      <View style={styles.center}>
+        <Text>User ID not provided</Text>
+      </View>
+    );
+  }
+  console.log("User ID:", userid);
 
   const [hasPermission, setHasPermission] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -26,8 +47,15 @@ const FaceCaptureScreen = () => {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
+      try {
+        // CORRECTED LINE: Access the nested 'Camera' property
+        const { status } = await Camera.Camera.requestCameraPermissionsAsync();
+        console.log("Camera permission status:", status);
+        setHasPermission(status === "granted");
+      } catch (error) {
+        console.error("Error requesting camera permissions:", error);
+        setHasPermission(false);
+      }
     })();
   }, []);
 
@@ -60,7 +88,7 @@ const FaceCaptureScreen = () => {
         metadata: {
           deviceType: "mobile",
           deviceOS: Platform.OS,
-          deviceModel: Platform.constants.model,
+          deviceModel: Device.modelName,
           resolution: photo.width + "x" + photo.height,
 
           // Add any other relevant metadata
@@ -69,6 +97,14 @@ const FaceCaptureScreen = () => {
 
       setUploadStatus("Uploading to server...");
 
+      const token = await AsyncStorage.getItem("token");
+
+      console.log("Token from getAuthToken:", token);
+
+      if (!token) {
+        throw new Error("Authentication token not found. Please log in.");
+      }
+
       // 4. Send to backend
       const response = await axios.post(
         `${baseUrl}/api/face/${userid}`,
@@ -76,6 +112,7 @@ const FaceCaptureScreen = () => {
         {
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           timeout: 20000, // 20 seconds timeout
         }
@@ -87,19 +124,47 @@ const FaceCaptureScreen = () => {
           "Success",
           "Face data stored successfully!\nFace ID: " + response.data.face_id
         );
+        router.push("/(tabs)/home");
       } else {
         throw new Error(response.data.message || "Server rejected the data");
       }
     } catch (error) {
       console.error("Upload failed:", error);
       setUploadStatus("Upload failed");
-      Alert.alert(
-        "Error",
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to upload face data"
-      );
+
+      let errorMessage = "Failed to upload face data.";
+
+      // Check for Axios error response with status code
+      if (error.response) {
+        if (error.response.status === 401 || error.response.status === 403) {
+          // Token is invalid or unauthorized
+          AsyncStorage.removeItem("token"); // Clear the invalid token
+          errorMessage =
+            "Your session has expired or is invalid. Please log in again.";
+          Alert.alert("Session Expired", errorMessage, [
+            {
+              text: "OK",
+              onPress: () => router.replace("/login"), // Redirect to your login screen
+            },
+          ]);
+          return; // Stop further execution in this catch block
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = `Server Error: ${error.response.status}`;
+        }
+      } else if (error.code === "ECONNABORTED") {
+        // Axios timeout error
+        errorMessage =
+          "Request timed out. Please check your network or try again.";
+      } else if (error.message) {
+        // Generic error message
+        errorMessage = error.message;
+      }
+
+      Alert.alert("Error", errorMessage);
     } finally {
+      setIsVerified(true);
       setIsUploading(false);
     }
   };
@@ -126,10 +191,10 @@ const FaceCaptureScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Camera
+      <CameraView
         ref={cameraRef}
         style={styles.camera}
-        type={Camera.Constants.Type.front}
+        facing="front"
         ratio="16:9"
       >
         <View style={styles.faceFrame}>
@@ -138,7 +203,7 @@ const FaceCaptureScreen = () => {
           <View style={styles.frameCornerBL} />
           <View style={styles.frameCornerBR} />
         </View>
-      </Camera>
+      </CameraView>
 
       <View style={styles.controls}>
         <Text style={styles.statusText}>{uploadStatus}</Text>
@@ -158,7 +223,7 @@ const FaceCaptureScreen = () => {
       )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -257,5 +322,3 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.7)",
   },
 });
-
-export default FaceCaptureScreen;

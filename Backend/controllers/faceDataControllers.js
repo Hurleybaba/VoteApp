@@ -32,9 +32,10 @@ export const setFaceData = async (req, res) => {
     }
 
     // Check if user exists (optional)
-    const [userCheck] = await pool.query("SELECT id FROM users WHERE id = ?", [
-      userid,
-    ]);
+    const [userCheck] = await pool.query(
+      "SELECT userid FROM users WHERE userid = ?",
+      [userid]
+    );
 
     if (userCheck.length === 0) {
       return res.status(404).json({
@@ -57,7 +58,9 @@ export const setFaceData = async (req, res) => {
 
     // Generate unique ID for this face record
     const face_id = uuidv4();
-    const created_at = timestamp || new Date().toISOString();
+    let created_at = timestamp || new Date().toISOString();
+
+    created_at = created_at.replace(/\.\d{3}Z$/, "").replace("T", " ");
 
     const result = await pool.query(
       "INSERT INTO faces (userid, face_id, image, created_at, metadata) VALUES (?, ?, ?, ?, ?)",
@@ -71,7 +74,7 @@ export const setFaceData = async (req, res) => {
     );
     return res.status(201).json({
       success: true,
-      face_id: result.face_id,
+      face_id: face_id,
       message: "Face data stored successfully",
       timestamp: created_at,
     });

@@ -11,6 +11,7 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import image from "@/assets/images/download.jpg";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,16 +21,18 @@ import { baseUrl } from "../baseUrl";
 
 import axios from "axios";
 import { useRouter } from "expo-router";
+import { useFormStore } from "../../components/store";
 
 export default function Home() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState({});
 
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [kycVerified, setKycVerified] = useState(false);
+  const { isVerified } = useFormStore();
 
   const checkLoginStatusAndFetchUser = async () => {
     setIsLoading(true);
@@ -59,6 +62,7 @@ export default function Home() {
     } finally {
       setIsLoading(false);
       setRefreshing(false);
+      setKycVerified(isVerified);
     }
   };
 
@@ -71,9 +75,10 @@ export default function Home() {
     checkLoginStatusAndFetchUser();
   }, []);
 
-  console.log(user);
+  // console.log(user);
+  console.log("User ID:", user?.userid);
 
-  if (isLoading) {
+  if (isLoading || Object.keys(user).length === 0) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#E8612D" />
@@ -129,7 +134,21 @@ export default function Home() {
           </View>
         </View>
         {!kycVerified && (
-          <TouchableOpacity onPress={() => router.push(`/${user?._id}/kycpg1`)}>
+          <TouchableOpacity
+            onPress={() => {
+              if (user?.userid) {
+                router.push({
+                  pathname: "/[kyc]/kycpg2",
+                  params: {
+                    kyc: "kyc", // this fills the [kyc] part of the path
+                    userid: user.userid,
+                  },
+                });
+              } else {
+                Alert.alert("Error", "User data not loaded yet");
+              }
+            }}
+          >
             <View style={styles.box2}>
               <Text style={styles.completeKYC}>Complete your KYC</Text>
             </View>
