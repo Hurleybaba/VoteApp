@@ -1,6 +1,5 @@
 import { Link } from "expo-router";
 import { useEffect, useState } from "react";
-
 import {
   Image,
   ScrollView,
@@ -18,21 +17,37 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { baseUrl } from "../baseUrl";
-
 import axios from "axios";
 import { useRouter } from "expo-router";
-import { useFormStore } from "../../components/store";
 
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState({});
-
+  const [hasAcademicData, setHasAcademicData] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
   const [kycVerified, setKycVerified] = useState(false);
-  const { isVerified } = useFormStore();
+
+  const checkFaceData = async (userId) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const response = await axios.get(`${baseUrl}/api/face/saa/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Check based on your backend response structure
+      if (response.data.success && response.data.userAcademicData) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking academic data:", error);
+      return false;
+    }
+  };
 
   const checkLoginStatusAndFetchUser = async () => {
     setIsLoading(true);
@@ -45,10 +60,30 @@ export default function Home() {
     }
     try {
       const response = await axios.get(`${baseUrl}/api/auth/user`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Conrol": "no-cache",
+        },
+        timeout: 15000,
       });
+
       if (response.status === 200) {
-        setUser(response.data); // Set response.data instead of whole response
+        if (!response.data?.user) {
+          throw new Error("Invalid user data structure");
+        }
+        setUser(response.data.user);
+
+        const isVerified = Boolean(response.data.verified);
+        setKycVerified(isVerified);
+        await AsyncStorage.setItem("isUserVerified", isVerified.toString());
+
+        if (!isVerified) {
+          const academicDataExists = await checkFaceData(
+            response.data.user.userid
+          );
+
+          setHasAcademicData(academicDataExists);
+        }
       } else {
         throw new Error("Failed to fetch user data");
       }
@@ -57,12 +92,13 @@ export default function Home() {
       setError(error.message);
 
       // Clear invalid token and redirect
-      await AsyncStorage.removeItem("token");
-      router.replace("/index2");
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        await AsyncStorage.multiRemove(["token", "isUserVerified"]);
+        router.replace("/index2");
+      }
     } finally {
       setIsLoading(false);
       setRefreshing(false);
-      setKycVerified(isVerified);
     }
   };
 
@@ -70,6 +106,11 @@ export default function Home() {
     setRefreshing(true);
     checkLoginStatusAndFetchUser();
   };
+
+  function capitalize(str) {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
 
   useEffect(() => {
     checkLoginStatusAndFetchUser();
@@ -99,8 +140,23 @@ export default function Home() {
     );
   }
 
+  const handleKYCRedirect = () => {
+    if (!user?.userid) {
+      Alert.alert("Error", "User data not loaded yet");
+      return;
+    }
+
+    router.push({
+      pathname: `/[kyc]/kycpg${hasAcademicData ? "2" : "1"}`,
+      params: {
+        kyc: "kyc",
+        userid: user.userid,
+      },
+    });
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
@@ -116,7 +172,7 @@ export default function Home() {
             tintColor="#E8612D"
           />
         }
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
       >
         <View style={styles.box1}>
           <View style={styles.circle}>
@@ -126,7 +182,7 @@ export default function Home() {
             <Text style={styles.welcomeText}>
               Welcome,{" "}
               {user ? (
-                <Text style={styles.user}>{user.username}</Text>
+                <Text style={styles.user}>{capitalize(user.username)}</Text>
               ) : (
                 <Text> Loading...</Text>
               )}
@@ -134,23 +190,11 @@ export default function Home() {
           </View>
         </View>
         {!kycVerified && (
-          <TouchableOpacity
-            onPress={() => {
-              if (user?.userid) {
-                router.push({
-                  pathname: "/[kyc]/kycpg2",
-                  params: {
-                    kyc: "kyc", // this fills the [kyc] part of the path
-                    userid: user.userid,
-                  },
-                });
-              } else {
-                Alert.alert("Error", "User data not loaded yet");
-              }
-            }}
-          >
+          <TouchableOpacity onPress={handleKYCRedirect}>
             <View style={styles.box2}>
-              <Text style={styles.completeKYC}>Complete your KYC</Text>
+              <Text style={styles.completeKYC}>
+                {hasAcademicData ? "Continue KYC" : "Complete your KYC"}
+              </Text>
             </View>
           </TouchableOpacity>
         )}
@@ -165,7 +209,10 @@ export default function Home() {
         ) : (
           <>
             <View style={styles.collection}>
-              <View style={styles.feed}>
+              <TouchableOpacity
+                style={styles.feed}
+                onPress={() => router.push("/(election)/123")}
+              >
                 <View style={styles.newsfeedDetails}>
                   <Text style={styles.topic}>
                     Vote for Student Representative
@@ -174,7 +221,7 @@ export default function Home() {
                     April 8th - 10th 8am to 10pm
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
               <View style={styles.feed}>
                 <View style={styles.newsfeedDetails}>
                   <Text style={styles.topic}>
@@ -266,8 +313,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     backgroundColor: "white",
-    marginBottom: 100,
+    // paddingBottom: 50,
   },
+
   box1: {
     width: "100%",
     height: 70,

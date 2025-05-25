@@ -1,4 +1,4 @@
-import express from express;
+ import express from express;
 
 import {verifyToken} from "../middlewares/verifyToken.js";
 import { getMenu, getHome } from "../controllers/generalController.js";

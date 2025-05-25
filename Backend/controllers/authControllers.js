@@ -2,7 +2,8 @@ import pool from "../database.js";
 import bcrypt from "bcrypt";
 import generateToken from "../Utils/generateToken.js";
 import { sendOtpEmail } from "../sendMail.js";
-import axios from "axios";
+import jwt from "jsonwebtoken";
+// import redisClient from "../config/redis.js";
 
 // Temporary in-memory storage (use database in production)
 const otpStorage = new Map();
@@ -42,6 +43,13 @@ export const registerUser = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Phone number must be exactly 11 digits" });
+    }
+    const existingEmail = await pool.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+    if (existingEmail[0].length > 0) {
+      return res.status(400).json({ message: "Email in already in use" });
     }
     if (!password) {
       return res.status(400).json({ message: "Password is required" });
@@ -137,7 +145,35 @@ export const loginUser = async (req, res) => {
   }
 };
 
-export const logoutUser = async (req, res) => {};
+//
+
+export const logoutUser = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(400).json({ message: "No token provided." });
+    }
+
+    // Decode token to get expiration
+    const decoded = jwt.decode(token);
+    const expiresAt = new Date(decoded.exp * 1000);
+
+    // Add to MySQL blacklist
+    await pool.query(
+      "INSERT INTO blacklisted_tokens (token, expires_at) VALUES (?, ?)",
+      [token, expiresAt]
+    );
+
+    res.status(200).json({ message: "Logged out successfully." });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(200).json({ message: "Token already revoked." });
+    }
+    console.error("Logout error:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
 
 export const sendEmail = async (req, res) => {
   try {
@@ -240,8 +276,10 @@ export const verifyOtp = async (req, res) => {
 };
 
 export const getUser = async (req, res) => {
+  let isUserVerified = false;
   try {
-    const userId = req.userId; // Extracted from the token in the middleware
+    const userId = req.userId;
+
     console.log("userId", userId);
 
     if (!userId) {
@@ -253,14 +291,26 @@ export const getUser = async (req, res) => {
       userId,
     ]);
 
+    const [verifiedUser] = await pool.query(
+      "SELECT * FROM faces where userid = ?",
+      [userId]
+    );
+
     // Check if the user exists
     if (user.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    if (verifiedUser.length !== 0) {
+      isUserVerified = true;
+    }
+
     // Return the user data
     console.log("user", user);
-    return res.status(200).json(user[0]); // Return the first user (since user is an array)
+    return res.status(200).json({
+      user: user[0],
+      verified: isUserVerified,
+    }); // Return the first user (since user is an array)
   } catch (error) {
     console.error("Error in getUser:", error);
     return res

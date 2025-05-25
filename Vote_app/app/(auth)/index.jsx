@@ -8,6 +8,7 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  Alert,
 } from "react-native";
 import { baseUrl } from "../baseUrl";
 
@@ -31,7 +32,6 @@ export default function index() {
             // If the token is valid, navigate to the home screen
             router.push("/(tabs)/home");
           } else {
-            // If the token is invalid, navigate to the login page
             router.push("/index2");
           }
         } catch (error) {
@@ -39,6 +39,7 @@ export default function index() {
           // If there was an error (e.g., token expired), navigate to the login page
           if (error.response && error.response.status === 401) {
             router.push("/index2");
+            Alert.alert("Session Terminated, please sign in again");
           } else {
             router.push("/index2");
           }

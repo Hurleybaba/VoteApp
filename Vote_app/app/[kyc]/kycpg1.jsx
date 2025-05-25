@@ -14,13 +14,15 @@ import {
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Input from "../../components/input";
 import Button from "../../components/button";
 import { useFormStore } from "../../components/store";
 import { baseUrl } from "../baseUrl";
+import Picker from "../../components/picker";
 
 export default function kycpg1() {
   const [department, setDepartment] = useState("");
@@ -29,8 +31,12 @@ export default function kycpg1() {
   const [level, setLevel] = useState("");
 
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const userid = params.userid;
 
   const { setKycData } = useFormStore();
+
+  const faculties = ["Law", "Applied Sciences", "Pharmacy", "Medical Sciences"];
 
   // Form state
 
@@ -120,30 +126,53 @@ export default function kycpg1() {
       level: level.trim(),
     });
 
+    const payload = {
+      department: department.trim(),
+      faculty: faculty.trim(),
+      matricNo: matricNo.trim(),
+      level: level.trim(),
+    };
+
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      router.replace("/index2");
+      return;
+    }
+
     try {
+      console.log("userid", userid);
       const res = await axios.post(
-        `${baseUrl}/api/auth/sendVerificationDetails`,
+        `${baseUrl}/api/face/saa/${userid}`,
+        payload,
         {
-          department: department.trim(),
-          faculty: faculty.trim(),
-          matricNo: matricNo.trim(),
-          level: level.trim(),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          timeout: 20000, // 20 seconds timeout
         }
       );
 
       if (res.data.success) {
         Alert.alert("Success", "Details sent successfully!");
         console.log("Response data:", res.data);
-        router.push("/kycpg2"); // Navigate to next screen
+        router.push({
+          pathname: "/[kyc]/kycpg2",
+          params: {
+            userid: userid,
+          },
+        }); // Navigate to next screen
       } else {
         Alert.alert("Error", res.data.message || "Failed to send details");
       }
     } catch (err) {
       console.error("Full error:", err);
-      console.error("Error response:", err.response?.data);
 
-      let errorMessage = "Failed to send OTP. Please try again.";
-      if (err.response) {
+      let errorMessage = "Failed to send details. Please try again.";
+      if (err.code === "ECONNABORTED") {
+        errorMessage = "Request timed out. Please try again.";
+      } else if (err.response) {
         errorMessage =
           err.response.data?.message || `Server error: ${err.response.status}`;
       } else if (err.request) {
@@ -195,12 +224,14 @@ export default function kycpg1() {
             error={error.department}
             showErrors={showErrors}
           />
-          <Input
+          <Picker
             name="Faculty"
-            placeholder="JohnDoe"
-            value={faculty}
-            onChangeText={setFaculty}
-            keyboardType="default"
+            option1={faculties[0]}
+            option2={faculties[1]}
+            option3={faculties[2]}
+            option4={faculties[3]}
+            selectedOption={faculty}
+            onValueChange={(c) => setFaculty(c)}
             error={error.faculty}
             showErrors={showErrors}
           />

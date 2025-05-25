@@ -3,8 +3,15 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { icons } from "@/constants/icon";
 import { Dimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const TabIcon = ({ focused, icon, name }: any) => {
+interface TabIconProps {
+  focused: boolean;
+  icon: any; // or use proper image source type
+  name: string;
+}
+
+const TabIcon = ({ focused, icon, name }: TabIconProps) => {
   if (focused) {
     return (
       <View style={styles.container}>
@@ -34,6 +41,7 @@ const TabIcon = ({ focused, icon, name }: any) => {
   );
 };
 const _layout = () => {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -47,7 +55,7 @@ const _layout = () => {
         tabBarStyle: {
           backgroundColor: "#0f0d23",
           borderRadius: 50,
-          marginBottom: 16,
+          marginBottom: insets.bottom,
           marginHorizontal: 10,
           height: 50,
           overflow: "hidden",
@@ -99,23 +107,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 5,
-    width: Dimensions.get("window").width / 2.5,
-    height: "100%",
-    flex: 1,
-    marginTop: 10,
+    minWidth: 120,
+    minHeight: 52,
+    marginTop: 20,
     borderWidth: 1,
     borderColor: "#E8612D",
     backgroundColor: "#E8612D",
-    minWidth: 120,
-    minHeight: 52,
     borderRadius: 50,
+    paddingHorizontal: 10,
   },
   container2: {
     justifyContent: "center",
     alignItems: "center",
     minWidth: 112,
     minHeight: 50,
-    marginTop: 10,
+    marginTop: 20,
   },
   text: {
     color: "#fff",

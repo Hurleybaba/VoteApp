@@ -139,12 +139,9 @@ export default function signup() {
     });
 
     try {
-      const res = await axios.post(
-        `http://192.168.8.101:3000/api/auth/sendEmail`,
-        {
-          email: email.trim(),
-        }
-      );
+      const res = await axios.post(`${baseUrl}/api/auth/sendEmail`, {
+        email: email.trim(),
+      });
 
       if (res.data.success) {
         Alert.alert("OTP Sent", "Check your email for the verification code.");
