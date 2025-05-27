@@ -22,28 +22,50 @@ import { Keyboard } from "react-native";
 import voteImg from "../../assets/images/Voting-amico.png";
 import Button from "../../components/button";
 import Input from "@/components/input";
-import Asterisk from "@/components/asterisk";
 import { baseUrl } from "../baseUrl";
-import Privacy from "../../components/privacy";
 
 export default function login() {
   const router = useRouter();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
+  const [error, setError] = useState({});
+  const [showErrors, setShowErrors] = useState(false);
   const [isFilled, setIsFilled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const validateForm = () => {
+    let newErrors = {};
+    let isValid = true;
+
+    if (!username.trim()) {
+      newErrors.username = "Username is required";
+      isValid = false;
+    }
+    if (!password.trim()) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    }
+
+    setError(newErrors);
+    return isValid;
+  };
 
   const handleSubmit = async () => {
     Keyboard.dismiss();
+    setShowErrors(true);
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
-    setError(null);
+    setError({});
 
     const userDetails = {
-      username,
-      password,
+      username: username.trim(),
+      password: password.trim(),
     };
 
     try {
@@ -51,22 +73,19 @@ export default function login() {
         `${baseUrl}/api/auth/login`,
         userDetails
       );
-      console.log("Response:", response);
+
       if (response.status === 200) {
         console.log("User successfully logged in");
-
         const { token } = response.data;
-
-        // Store the token in AsyncStorage
         await AsyncStorage.setItem("token", token);
-
         router.push("/(tabs)/home");
-      } else {
-        console.error("Error logging in");
       }
-    } catch (error) {
-      setError(error);
-      console.error("Error sending data:", error);
+    } catch (err) {
+      setError({
+        general:
+          err.response?.data?.message || "Login failed. Please try again.",
+      });
+      console.error("Error sending data:", err);
     } finally {
       setIsLoading(false);
     }
@@ -89,109 +108,94 @@ export default function login() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <StatusBar
           barStyle="dark-content"
           backgroundColor="transparent"
           translucent
         />
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons
-              name="arrow-back-outline"
-              size={24}
-              color="black"
-              style={{ paddingTop: 20 }}
-            />
-            {error && (
-              <View
-                style={{
-                  gap: 10,
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: "pink",
-                }}
-              >
-                <Ionicons name="alert-outline" size={24} color="red" />
-                <Text
-                  style={{
-                    color: "red",
-                    textAlign: "center",
-                    fontSize: 18,
-                    fontWeight: "bold",
-                  }}
-                >
-                  {error.response?.data?.message || "Login failed"}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <View style={styles.view}>
-            <Image source={voteImg} style={{ width: 300, height: 300 }} />
-            <View style={styles.outerContainer}>
-              <View>
-                <Text style={styles.title}>Log into your Account</Text>
-                <Text style={styles.text}>
-                  Username
-                  <Asterisk />
-                </Text>
-              </View>
-              <TextInput
-                placeholder=""
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="chevron-back-outline" size={24} color="#E8612D" />
+            </TouchableOpacity>
+          </View>
+
+          {error.general && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={24} color="#EF4444" />
+              <Text style={styles.errorText}>{error.general}</Text>
+            </View>
+          )}
+
+          <View style={styles.content}>
+            <View style={styles.imageContainer}>
+              <Image source={voteImg} style={styles.image} />
+            </View>
+
+            <View style={styles.formContainer}>
+              <Text style={styles.title}>Welcome Back!</Text>
+              <Text style={styles.subtitle}>Log in to your account</Text>
+
+              <Input
+                name="Username"
+                placeholder="Enter your username"
                 value={username}
                 onChangeText={setUsername}
                 keyboardType="default"
-                style={styles.input}
+                error={error.username}
+                showErrors={showErrors}
               />
-            </View>
-            <View style={styles.outerContainer}>
-              <View>
-                <Text style={styles.text}>
-                  Password
-                  <Asterisk />
-                </Text>
+
+              <View style={styles.passwordContainer}>
+                <Input
+                  name="Password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  error={error.password}
+                  showErrors={showErrors}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={24}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
               </View>
-              <TextInput
-                placeholder=""
-                value={password}
-                onChangeText={setPassword}
-                keyboardType="default"
-                style={styles.input}
-                secureTextEntry={true}
-              />
             </View>
           </View>
         </ScrollView>
-        <Button
-          text={
-            isLoading ? (
-              <ActivityIndicator
-                size="small"
-                color="#E8612D"
-                style={styles.loader}
-              />
-            ) : (
-              "Log In"
-            )
-          }
-          disabled={!isFilled}
-          buttonStyle={[
-            {
-              position: "absolute",
-              bottom: 20,
-              marginLeft: 20,
-              width: "105%",
-              left: "-2.5%",
-            },
-            (!isFilled || isLoading) && {
-              backgroundColor: "#DADADA",
-            },
-          ]}
-          handlePress={handleSubmit}
-        />
 
-        {/* <Privacy /> */}
+        <SafeAreaView edges={["bottom"]} style={styles.buttonWrapper}>
+          <Button
+            text={
+              isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                "Log In"
+              )
+            }
+            disabled={!isFilled || isLoading}
+            buttonStyle={[
+              styles.loginButton,
+              (!isFilled || isLoading) && styles.disabledButton,
+            ]}
+            handlePress={handleSubmit}
+          />
+        </SafeAreaView>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -200,55 +204,100 @@ export default function login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: "100%",
-    paddingHorizontal: 20,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: "#fff",
-    paddingBottom: 100,
   },
   scroll: {
     flex: 1,
   },
-  view: {
-    flex: 1,
-    width: "100%",
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FDD8CD",
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 40,
-    // height: 700,
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  imageContainer: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  image: {
+    width: 240,
+    height: 240,
+  },
+  formContainer: {
+    marginTop: 32,
   },
   title: {
     fontSize: 28,
-    fontWeight: "bold",
-    paddingBottom: 20,
+    fontWeight: "700",
+    color: "#1F2937",
     textAlign: "center",
-    color: "#E8612D",
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#868686",
-    paddingVertical: 8,
-  },
-  outerContainer: {
-    marginBottom: 16,
-    width: "100%",
-  },
-  text: {
     fontSize: 16,
-    fontWeight: "regular",
-    color: "gray",
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 32,
   },
-  input: {
-    borderBottomWidth: 1,
-    borderColor: "#DADADA",
+  passwordContainer: {
+    position: "relative",
+    marginTop: 16,
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    zIndex: 1,
+  },
+  buttonWrapper: {
     backgroundColor: "white",
-    borderRadius: 4,
-    fontSize: 16,
-    // marginTop: 5,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-  loader: {
-    alignSelf: "center",
+  loginButton: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#E8612D",
+    shadowColor: "#E8612D",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  disabledButton: {
+    backgroundColor: "#FDA4A4",
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

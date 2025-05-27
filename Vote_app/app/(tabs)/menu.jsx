@@ -13,11 +13,19 @@ import {
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import profileImage from "@/assets/images/download.jpg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { baseUrl } from "../baseUrl";
+import {
+  COLORS,
+  TYPOGRAPHY,
+  SPACING,
+  SHADOWS,
+  BORDER_RADIUS,
+} from "@/constants/theme";
 
 const menu = () => {
   const router = useRouter();
@@ -202,34 +210,37 @@ const menu = () => {
         }
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
       >
-        <View style={styles.container}>
+        <LinearGradient
+          colors={["#E8612D", "#FAB09B"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
           <View style={styles.circle}>
             <Image source={profileImage} style={styles.profile} />
           </View>
-          <View style={styles.update}>
-            <Text style={styles.updateText}>{`${capitalize(
+          <View style={styles.nameContainer}>
+            <Text style={styles.nameText}>{`${capitalize(
               user.first_name
             )} ${capitalize(user.last_name)}`}</Text>
             {!kycVerified ? (
               <Ionicons
-                name="help-circle-outline"
+                name="shield-outline"
                 size={22}
-                color="grey"
-                style={styles.backIcon}
+                color={COLORS.feedback.warning}
               />
             ) : (
               <Ionicons
-                name="checkmark-circle-outline"
+                name="shield-checkmark"
                 size={22}
-                color="green"
-                // backgroundColor="green"
-                style={styles.backIcon}
+                color={COLORS.feedback.success}
               />
             )}
           </View>
-        </View>
+        </LinearGradient>
+
         <View style={styles.parent}>
-          <Text style={styles.subtopic}>ACCOUNT INFORMATIONS</Text>
+          <Text style={styles.subtopic}>ACCOUNT INFORMATION</Text>
           <View style={styles.settingContainer}>
             <View style={styles.setting}>
               <Text>Role</Text>
@@ -240,9 +251,29 @@ const menu = () => {
               <Text>Verified</Text>
 
               {kycVerified ? (
-                <Text style={styles.right}>Yes</Text>
+                <View style={styles.verificationStatus}>
+                  <View
+                    style={[styles.statusDot, { backgroundColor: "#10B981" }]}
+                  />
+                  <Text style={[styles.statusText, { color: "#10B981" }]}>
+                    Verified
+                  </Text>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={16}
+                    color={COLORS.feedback.success}
+                  />
+                </View>
               ) : (
-                <Text style={styles.right}>No</Text>
+                <View style={styles.verificationStatus}>
+                  <View
+                    style={[styles.statusDot, { backgroundColor: "#F59E0B" }]}
+                  />
+                  <Text style={[styles.statusText, { color: "#F59E0B" }]}>
+                    Pending
+                  </Text>
+                  <Ionicons name="alert-circle" size={16} color="#F59E0B" />
+                </View>
               )}
             </View>
             <View style={styles.setting}>
@@ -376,38 +407,95 @@ const menu = () => {
 export default menu;
 
 const styles = StyleSheet.create({
-  container: {
-    justifyContent: "center",
+  header: {
+    paddingTop: 60,
+    paddingBottom: 30,
     alignItems: "center",
-    // backgroundColor: "#F5FCFF",
-    width: "100%",
-    height: 260,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   circle: {
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: "red",
-    marginBottom: 10,
+    backgroundColor: COLORS.neutral.white,
+    marginBottom: SPACING.md,
     overflow: "hidden",
+    ...SHADOWS.md,
+    borderWidth: 4,
+    borderColor: COLORS.neutral.white,
   },
   profile: {
     width: "100%",
     height: "100%",
+    borderRadius: 50,
   },
-  update: {
+  nameContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 20,
     flexDirection: "row",
-    gap: 6,
-    alignItems: "flex-end",
-    justifyContent: "center",
+    alignItems: "baseline",
+    gap: 10,
+    padding: 12,
+    marginTop: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  updateText: {
+  nameText: {
     fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 8,
   },
-  backIcon: {},
+  verificationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  verifiedBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+  },
+  unverifiedBadge: {
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
+  },
+  verifiedText: {
+    color: "#10B981",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  unverifiedText: {
+    color: "#F59E0B",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  verificationStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
   parent: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    marginTop: SPACING.md,
   },
   subtopic: {
     color: "grey",
@@ -446,14 +534,15 @@ const styles = StyleSheet.create({
   },
   right: {
     textTransform: "uppercase",
-    fontWeight: 600,
-    color: "gray",
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.neutral.gray[600],
+    fontSize: TYPOGRAPHY.sizes.sm,
   },
   right2: {
     textTransform: "capitalize",
-    fontWeight: 600,
-    color: "gray",
-    fontSize: 14,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.neutral.gray[600],
+    fontSize: TYPOGRAPHY.sizes.sm,
     textAlign: "right",
   },
   logout: {
@@ -463,8 +552,31 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: 10,
     borderWidth: 1,
-    borderRadius: 6,
-    backgroundColor: "#e4e4e4",
-    borderColor: "#dcdcdc",
+    borderColor: `${COLORS.feedback.error}20`,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.neutral.white,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SPACING.lg,
+  },
+  errorText: {
+    color: COLORS.feedback.error,
+    marginBottom: SPACING.md,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary.default,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  retryText: {
+    color: COLORS.neutral.white,
+    fontWeight: TYPOGRAPHY.weights.semibold,
   },
 });

@@ -6,8 +6,9 @@ import {
   View,
   StatusBar,
 } from "react-native";
-import { useRouter } from "expo-router";
-import React from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import image from "@/assets/images/success.png";
@@ -15,6 +16,38 @@ import Button from "@/components/button";
 
 export default function electionId() {
   const router = useRouter();
+  const { electionId, candidateId } = useLocalSearchParams();
+  
+
+  const [user, setUser] = useState({});
+  const [candidate, setCandidate] = useState({});
+  const [error, setError] = useState(null);
+
+  const getCandidate = async () => {
+    try {
+      setIsLoading(true);
+      const candidateData = await AsyncStorage.getItem("candidateData");
+
+      if (!candidateData) {
+        Alert.alert("Error", "Candidate data not found");
+        setError("Candidate not found");
+        return;
+      }
+
+      const parsedData = JSON.parse(candidateData);
+      if (!parsedData?.first_name) {
+        throw new Error("Invalid candidate data format");
+      }
+
+      setCandidate(parsedData);
+    } catch (error) {
+      console.error("Failed to load candidate:", error);
+      setError(error.message);
+      Alert.alert("Error", "Failed to load candidate data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
@@ -35,7 +68,7 @@ export default function electionId() {
             The receipt is sent to your email address
           </Text>
           <Button
-            text="BACK TO HOME SCREEN"
+            text="VIEW RECIEPT"
             buttonStyle={{
               elevation: 5,
               backgroundColor: "#E8612D",
@@ -46,21 +79,13 @@ export default function electionId() {
               color: "white",
             }}
             handlePress={() => {
-              router.replace("/(tabs)/home");
-            }}
-          />
-          <Button
-            text="SEE RECEIPT"
-            buttonStyle={{
-              backgroundColor: "white",
-            }}
-            textStyle={{
-              fontSize: 18,
-              fontWeight: "bold",
-              color: "#E8612D",
-            }}
-            handlePress={() => {
-              router.replace("/electionId/receipt");
+              router.replace({
+                pathname: `/${electionId}/receipt/`,
+                params: {
+                  electionId: electionId,
+                  candidateId: candidate.candidate_id,
+                },
+              });
             }}
           />
         </View>

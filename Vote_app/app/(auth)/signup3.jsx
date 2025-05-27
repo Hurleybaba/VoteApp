@@ -27,6 +27,8 @@ export default function signup() {
   const [isFilled, setIsFilled] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const setFormData = useFormStore((state) => state.setFormData);
   const formData = useFormStore((state) => state.formData);
@@ -106,20 +108,48 @@ export default function signup() {
           </TouchableOpacity>
 
           <Text style={styles.heading}>Set up a password</Text>
-          <Input
-            name="Password"
-            placeholder="********"
-            value={password}
-            onChangeText={setPassword}
-            keyboardType="default"
-          />
-          <Input
-            name="Confirm Password"
-            placeholder="********"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            keyboardType="visible-password"
-          />
+
+          <View style={styles.passwordContainer}>
+            <Input
+              name="Password"
+              placeholder="********"
+              value={password}
+              onChangeText={setPassword}
+              keyboardType="default"
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={24}
+                color="#6B7280"
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.passwordContainer}>
+            <Input
+              name="Confirm Password"
+              placeholder="********"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              keyboardType="default"
+              secureTextEntry={!showConfirmPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              <Ionicons
+                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                size={24}
+                color="#6B7280"
+              />
+            </TouchableOpacity>
+          </View>
         </ScrollView>
         <Button
           text="Continue"
@@ -182,6 +212,16 @@ const styles = StyleSheet.create({
     fontWeight: "light",
     marginBottom: 10,
     color: "gray",
+  },
+  passwordContainer: {
+    position: "relative",
+    marginBottom: 16,
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    zIndex: 1,
   },
   popupContainer: {
     flex: 1,

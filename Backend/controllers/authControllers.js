@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import generateToken from "../Utils/generateToken.js";
 import { sendOtpEmail } from "../sendMail.js";
 import jwt from "jsonwebtoken";
+import { nanoid } from "nanoid";
 // import redisClient from "../config/redis.js";
 
 // Temporary in-memory storage (use database in production)
@@ -58,10 +59,13 @@ export const registerUser = async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const userid = nanoid(12);
+
     // Insert the new user into the database
     const [result] = await pool.query(
-      "INSERT INTO users (first_name, middle_name, last_name, username, age, email, phone, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO users (userid, first_name, middle_name, last_name, username, age, email, phone, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
+        userid,
         firstname,
         middlename,
         lastname,
@@ -73,20 +77,18 @@ export const registerUser = async (req, res) => {
       ]
     );
 
-    const userId = result.insertId;
-
-    if (!userId) {
+    if (!userid) {
       return res.status(500).json({ message: "Failed to create user" });
     }
 
-    const token = generateToken(userId);
+    const token = generateToken(userid);
 
     // Send the data and token back to the client
     return res.status(201).json({
       message: "User registered successfully",
       token,
       user: {
-        id: userId,
+        userid,
         firstname,
         middlename,
         lastname,

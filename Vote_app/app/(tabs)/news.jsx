@@ -10,13 +10,34 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
-import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { baseUrl } from "../baseUrl";
+import {
+  COLORS,
+  TYPOGRAPHY,
+  SPACING,
+  SHADOWS,
+  BORDER_RADIUS,
+} from "@/constants/theme";
+
+const NewsCard = ({ icon, title, details }) => (
+  <TouchableOpacity style={styles.newsCard}>
+    <View style={styles.iconContainer}>
+      <Ionicons name={icon} size={24} color={COLORS.primary.default} />
+    </View>
+    <View style={styles.newsContent}>
+      <Text style={styles.newsTitle}>{title}</Text>
+      <Text style={styles.newsDetails} numberOfLines={2}>
+        {details}
+      </Text>
+    </View>
+  </TouchableOpacity>
+);
 
 export default function News() {
   const router = useRouter();
@@ -84,7 +105,7 @@ export default function News() {
   if (isLoading || Object.keys(user).length === 0) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E8612D" />
+        <ActivityIndicator size="large" color={COLORS.primary.default} />
       </SafeAreaView>
     );
   }
@@ -105,119 +126,115 @@ export default function News() {
 
   console.log("User ID:", user?.userid);
 
-  // const renderElectionItem = ({ item }) => {
-  //   return (
-  //     <TouchableOpacity style={styles.list2}>
-  //       <View style={styles.notes}>
-  //         <View style={styles.neww}>
-  //           <Text style={styles.topic2}>{item.election_name}</Text>
-  //           <Text style={styles.date}>
-  //             {item.created_at
-  //               ? new Date(
-  //                   item.created_at.replace(" ", "T")
-  //                 ).toLocaleDateString()
-  //               : ""}
-  //           </Text>
-  //         </View>
-  //         <View>
-  //           <Ionicons
-  //             name="chevron-forward-outline"
-  //             size={20}
-  //             color="black"
-  //             style={styles.backIcon}
-  //           />
-  //         </View>
-  //       </View>
-  //     </TouchableOpacity>
-  //   );
-  // };
-  const renderElectionItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => this.handleElectionPress(item)}
-      style={styles.list2}
-    >
-      <View
-        style={[
-          styles.notes,
-          {
-            borderLeftWidth: 5,
-            paddingLeft: 5,
-            borderLeftColor:
-              item.status === "ended"
-                ? "red"
-                : item.status === "ongoing"
-                ? "green"
-                : "blue",
-          },
-        ]}
-      >
-        <View style={styles.neww}>
-          <Text style={styles.topic2}>{item.election_name}</Text>
-          <Text style={styles.date}>
-            {item.created_at
-              ? new Date(item.created_at.replace(" ", "T")).toLocaleDateString()
-              : ""}
-          </Text>
-          <Text
-            style={[
-              styles.electionStatus,
-              {
-                color:
-                  item.status === "ended"
-                    ? "red"
-                    : item.status === "ongoing"
-                    ? "green"
-                    : "blue",
-              },
-            ]}
-          >
-            {item.status.toUpperCase()}
-          </Text>
-        </View>
+  const handleElectionPress = (status, id) => {
+    if (status === "ongoing") {
+      // `/(election)/${id}/indexx`);
+      router.push({
+        pathname: `/(election)/${id}/ended`,
+        params: {
+          electionId: id,
+        },
+      });
+    } else if (status === "ended") {
+      router.push({
+        pathname: `/(election)/${id}/indexx`,
+        params: {
+          electionId: id,
+        },
+      });
+    } else {
+      router.push(`/(election)/${id}/success`);
+    }
+  };
 
-        <View>
-          <Ionicons
-            name="chevron-forward-outline"
-            size={20}
-            color="black"
-            style={styles.backIcon}
-          />
+  const renderElectionItem = ({ item }) => {
+    const statusColors = {
+      ended: COLORS.feedback.error,
+      ongoing: COLORS.feedback.success,
+      upcoming: COLORS.feedback.info,
+    };
+
+    const color = statusColors[item.status] || COLORS.primary.default;
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleElectionPress(item.status, item.election_id)}
+        style={styles.electionCard}
+      >
+        <View style={[styles.statusBar, { backgroundColor: color }]} />
+        <View style={styles.electionContent}>
+          <View style={styles.electionInfo}>
+            <Text style={styles.electionTitle}>{item.election_name}</Text>
+            <Text style={styles.electionDate}>
+              {item.created_at
+                ? new Date(
+                    item.created_at.replace(" ", "T")
+                  ).toLocaleDateString()
+                : ""}
+            </Text>
+          </View>
+          <View style={styles.statusSection}>
+            <View
+              style={[styles.statusBadge, { backgroundColor: `${color}15` }]}
+            >
+              <Text style={[styles.statusText, { color }]}>
+                {item.status.toUpperCase()}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={COLORS.neutral.gray[400]}
+            />
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.container}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
         translucent
       />
+
       <ScrollView
-        style={styles.container}
+        style={styles.scrollView}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#E8612D"]}
-            tintColor="#E8612D"
+            colors={[COLORS.primary.default]}
+            tintColor={COLORS.primary.default}
           />
         }
-        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.cont2}>
+        <LinearGradient
+          colors={[COLORS.primary.default, COLORS.primary.light]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
           <Text style={styles.heading}>Latest Updates & News</Text>
           <Text style={styles.subheading}>
             Stay informed with real-time updates and announcements regarding the
             app, and ongoing and upcoming Elections
           </Text>
-        </View>
+        </LinearGradient>
 
         {!kycVerified ? (
           <View style={styles.kycPrompt}>
-            <Ionicons name="alert-circle" size={24} color="#E8612D" />
+            <Ionicons
+              name="shield-outline"
+              size={40}
+              color={COLORS.primary.default}
+            />
+            <Text style={styles.kycTitle}>Verification Required</Text>
             <Text style={styles.kycText}>
-              Please complete KYC verification to view news
+              Complete your KYC verification to access election news and updates
             </Text>
             <TouchableOpacity
               style={styles.verifyButton}
@@ -227,52 +244,42 @@ export default function News() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.collection}>
-            <View style={styles.list}>
-              <View>
-                <Ionicons
-                  name="volume-medium-outline"
-                  size={20}
-                  color="black"
-                  style={styles.backIcon}
-                />
-              </View>
-              <View style={styles.notes1}>
-                <Text style={styles.topic}>SYSTEM UPDATES</Text>
-                <Text style={styles.details}>
-                  App v1.0001 released - Now includes Face ID login efiubeef .
-                </Text>
-              </View>
+          <View style={styles.content}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>System Updates</Text>
+              <NewsCard
+                icon="newspaper-outline"
+                title="New Features Available"
+                details="App v1.0001 released - Now includes Face ID login and improved security measures"
+              />
+              <NewsCard
+                icon="book-outline"
+                title="Voter Education"
+                details="Learn about the voting process and how to verify your eligibility"
+              />
             </View>
-            <View style={styles.list}>
-              <View>
-                <Ionicons
-                  name="book-outline"
-                  size={20}
-                  color="black"
-                  style={styles.backIcon}
-                />
-              </View>
-              <View style={styles.notes1}>
-                <Text style={styles.topic}>VOTER EDUCATION</Text>
-                <Text style={styles.details}>
-                  How to Verify Your Eligibility to Vote
-                </Text>
-              </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Elections</Text>
+              <FlatList
+                data={posts}
+                renderItem={renderElectionItem}
+                keyExtractor={(item) => item.election_id?.toString()}
+                ListEmptyComponent={
+                  <View style={styles.emptyState}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={48}
+                      color={COLORS.neutral.gray[300]}
+                    />
+                    <Text style={styles.emptyStateText}>
+                      No elections found
+                    </Text>
+                  </View>
+                }
+                scrollEnabled={false}
+              />
             </View>
-            <FlatList
-              data={posts}
-              renderItem={renderElectionItem}
-              keyExtractor={(item) => item.election_id?.toString()}
-              ListEmptyComponent={
-                <Text style={{ textAlign: "center", padding: 20 }}>
-                  No elections found
-                </Text>
-              }
-              scrollEnabled={false}
-              // refreshing={false}
-              // onRefresh={() => refetchData()}
-            />
           </View>
         )}
       </ScrollView>
@@ -283,101 +290,188 @@ export default function News() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: COLORS.neutral.white,
   },
-  cont2: {
-    backgroundColor: "#F78869",
-    padding: 20,
-    paddingTop: 30,
-    paddingBottom: 40,
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    padding: SPACING.xl,
+    paddingTop: SPACING["3xl"],
+    paddingBottom: SPACING["2xl"],
   },
   heading: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 10,
+    fontSize: TYPOGRAPHY.sizes["2xl"],
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.neutral.white,
+    marginBottom: SPACING.sm,
   },
   subheading: {
-    fontSize: 14,
-    color: "white",
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.neutral.white,
+    opacity: 0.9,
+    lineHeight: TYPOGRAPHY.sizes.md * 1.4,
   },
-  kycPrompt: {
-    alignItems: "center",
-    padding: 20,
-    margin: 20,
-    backgroundColor: "#FEECE6",
-    borderRadius: 10,
+  content: {
+    padding: SPACING.lg,
   },
-  kycText: {
-    marginVertical: 10,
-    textAlign: "center",
-    color: "#E8612D",
+  section: {
+    marginBottom: SPACING.xl,
   },
-  verifyButton: {
-    backgroundColor: "#E8612D",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.secondary.default,
+    marginBottom: SPACING.md,
   },
-  verifyButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  collection: {
-    paddingBottom: 30,
-  },
-  list: {
+  newsCard: {
     flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#FEECE6",
-    borderColor: "#FDD8CD",
-    borderBottomWidth: 1,
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.neutral.gray[100],
   },
-  // electionItem: {
-  //   padding: 15,
-  //   marginVertical: 5,
-  //   backgroundColor: "white",
-  //   borderRadius: 5,
-  //   // other styles...
-  // },
-  list2: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#FFFBF9",
-    borderColor: "#FDD8CD",
-    borderBottomWidth: 1,
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: `${COLORS.primary.default}10`,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: SPACING.md,
   },
-  topic: {
-    textTransform: "uppercase",
-    fontWeight: "bold",
-    marginBottom: 6,
+  newsContent: {
+    flex: 1,
   },
-  details: {
-    fontSize: 14,
-    paddingRight: 16,
+  newsTitle: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.secondary.default,
+    marginBottom: SPACING.xs,
   },
-  notes: {
+  newsDetails: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.neutral.gray[600],
+    lineHeight: TYPOGRAPHY.sizes.sm * 1.4,
+  },
+  electionCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.md,
+    overflow: "hidden",
+    ...SHADOWS.sm,
+  },
+  statusBar: {
+    width: 4,
+  },
+  electionContent: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    padding: SPACING.lg,
   },
-  notes1: {
-    flexDirection: "column",
+  electionInfo: {
+    flex: 1,
+    marginRight: SPACING.md,
   },
-  topic2: {
-    fontSize: 18,
-    fontWeight: "bold",
+  electionTitle: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.secondary.default,
+    marginBottom: SPACING.xs,
   },
-  date: {
-    fontSize: 12,
-    color: "gray",
-    paddingVertical: 10,
+  electionDate: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.neutral.gray[500],
   },
-  link: {
-    fontWeight: "bold",
-    color: "#F78869",
-    fontSize: 18,
+  statusSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  statusBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  statusText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  kycPrompt: {
+    margin: SPACING.lg,
+    padding: SPACING.xl,
+    backgroundColor: COLORS.neutral.gray[50],
+    borderRadius: BORDER_RADIUS.lg,
+    alignItems: "center",
+    ...SHADOWS.sm,
+  },
+  kycTitle: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.secondary.default,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  kycText: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.neutral.gray[600],
+    textAlign: "center",
+    marginBottom: SPACING.lg,
+    lineHeight: TYPOGRAPHY.sizes.md * 1.4,
+  },
+  verifyButton: {
+    backgroundColor: COLORS.primary.default,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    ...SHADOWS.sm,
+  },
+  verifyButtonText: {
+    color: COLORS.neutral.white,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  emptyState: {
+    padding: SPACING.xl,
+    alignItems: "center",
+    backgroundColor: COLORS.neutral.gray[50],
+    borderRadius: BORDER_RADIUS.lg,
+    marginTop: SPACING.md,
+  },
+  emptyStateText: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    color: COLORS.neutral.gray[500],
+    marginTop: SPACING.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.neutral.white,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SPACING.lg,
+  },
+  errorText: {
+    color: COLORS.feedback.error,
+    marginBottom: SPACING.md,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary.default,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  retryText: {
+    color: COLORS.neutral.white,
+    fontWeight: TYPOGRAPHY.weights.semibold,
   },
 });
