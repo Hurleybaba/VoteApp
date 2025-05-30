@@ -8,15 +8,105 @@ import {
   StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import image from "@/assets/images/download.jpg";
 import Button from "@/components/button";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { baseUrl } from "../../baseUrl";
 
 export default function electionId() {
   const router = useRouter();
+
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [faceData, setFaceData] = useState(null);
+  const [image1, setImage1] = use;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const getFaceData = async (userid) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        console.error("No token found in AsyncStorage");
+        return;
+      }
+
+      const response = await axios.get(`${baseUrl}/api/face/${userid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000,
+      });
+
+      if (response.data?.image) {
+        // Access image from response.data
+        console.log("Face data fetched successfully");
+        console.log(response.data.image);
+        setFaceData(response.data.image); // This should now work
+      } else {
+        console.error("No face data found in response");
+      }
+    } catch (error) {
+      console.error("Error fetching face data:", error);
+      setError("Failed to load face data");
+    }
+  };
+
+  const checkLoginStatusAndFetchUser = async () => {
+    setIsLoading(true);
+    setError(null);
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      router.replace("/index2");
+      return;
+    }
+    try {
+      const response = await axios.get(`${baseUrl}/api/auth/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Conrol": "no-cache",
+        },
+        timeout: 15000,
+      });
+
+      if (response.status === 200) {
+        if (!response.data?.user) {
+          throw new Error("Invalid user data structure");
+        }
+        setUser(response.data.user);
+
+        const faceDetails = await getFaceData(response.data.user.userid);
+      } else {
+        throw new Error("Failed to fetch user data");
+      }
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      setError(error.message);
+
+      // Clear invalid token and redirect
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        await AsyncStorage.multiRemove(["token", "isUserVerified"]);
+        router.replace("/index2");
+      }
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    checkLoginStatusAndFetchUser();
+  };
+
+  useEffect(() => {
+    checkLoginStatusAndFetchUser();
+  }, []);
+
   return (
     <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
       <StatusBar
@@ -88,7 +178,6 @@ export default function electionId() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

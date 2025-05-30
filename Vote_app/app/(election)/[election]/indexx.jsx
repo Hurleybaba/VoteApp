@@ -35,25 +35,74 @@ export default function electionId() {
   const router = useRouter();
   const { electionId } = useLocalSearchParams();
 
-  console.log("elecion id:", electionId);
-
   const [user, setUser] = useState({});
   const [candidates, setCandidates] = useState([]);
   const [visible, setVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [election, setElection] = useState(null);
+  const [timeLeft, setTimeLeft] = useState({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   const showDialog = () => setVisible(true);
   const hideDialog = () => setVisible(false);
 
-  const getCandidates = async () => {
-    setIsLoading(true);
-    setError(null);
-
+  const checkVoteStatus = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/index2");
+        return false;
+      }
 
+      // Then verify with server
+      const voteStatusResponse = await axios.get(
+        `${baseUrl}/api/votes/check-status/${electionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (voteStatusResponse.data.hasVoted) {
+        // If server shows voted but local storage doesn't, update local storage
+        await AsyncStorage.setItem(`voted_${electionId}`, "true");
+        Alert.alert(
+          "Already Voted",
+          "You have already voted in this election.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(tabs)/news"),
+            },
+          ]
+        );
+        return true;
+      }
+
+      const localHasVoted = await AsyncStorage.getItem(`voted_${electionId}`);
+
+      //delete the async storage own if the server responds with false
+      if (voteStatusResponse.data.hasVoted === false && localHasVoted) {
+        await AsyncStorage.removeItem(`voted_${electionId}`);
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking vote status:", error);
+      return false;
+    }
+  };
+
+  const getCandidates = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
       if (!token) {
         router.replace("/index2");
         return;
@@ -78,7 +127,6 @@ export default function electionId() {
       console.error("Failed error:", error);
       setError(error.message);
 
-      // Clear invalid token and redirect
       if (error.response?.status === 401 || error.response?.status === 403) {
         await AsyncStorage.removeItem("token");
         router.replace("/index2");
@@ -89,14 +137,137 @@ export default function electionId() {
     }
   };
 
-  const onRefresh = () => {
+  const changeElectionStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        console.error("Token not found");
+        router.replace("/index2");
+        return;
+      }
+
+      const response = await axios.put(
+        `${baseUrl}/api/election/${electionId}/status`,
+        {
+          status: "ended",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (response.status === 200) {
+        console.log("Election status changed successfully");
+
+        router.replace({
+          pathname: `/(election)/${electionId}/ended`,
+          params: {
+            electionId: electionId,
+          },
+        });
+      } else {
+        console.error("Failed to change election status");
+      }
+    } catch (error) {
+      console.error("Error changing election status:", error);
+    }
+  };
+
+  const getElectionDetails = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/index2");
+        return;
+      }
+
+      const response = await axios.get(
+        `${baseUrl}/api/election/${electionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (response.status === 200) {
+        setElection(response.data.election);
+      }
+    } catch (error) {
+      console.error("Error fetching election details:", error);
+    }
+  };
+
+  const initializeData = async () => {
+    setIsLoading(true);
+    const voted = await checkVoteStatus();
+    setHasVoted(voted);
+    if (!voted) {
+      await getCandidates();
+      await getElectionDetails();
+    }
+    setIsLoading(false);
+  };
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    getCandidates();
+    await initializeData();
   };
 
   useEffect(() => {
-    getCandidates();
+    initializeData();
   }, []);
+
+  useEffect(() => {
+    if (!election?.start_date || !election?.duration) return;
+
+    const startDate = new Date(election.start_date);
+    const durationMs = election.duration * 60 * 60 * 1000; // Convert hours to milliseconds
+    const endDate = new Date(startDate.getTime() + durationMs);
+
+    const timer = setInterval(() => {
+      const now = new Date();
+      const timeUntilEnd = endDate.getTime() - now.getTime();
+
+      // If election has ended
+      if (timeUntilEnd <= 0) {
+        clearInterval(timer);
+        Alert.alert(
+          "Election Ended",
+          "This election has ended. Redirecting to results page...",
+          [
+            {
+              text: "OK",
+              onPress: async () => await changeElectionStatus(),
+            },
+          ]
+        );
+        return;
+      }
+
+      // Calculate remaining time
+      const totalSeconds = Math.floor(timeUntilEnd / 1000);
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      const seconds = totalSeconds % 60;
+
+      setTimeLeft({
+        hours,
+        minutes,
+        seconds,
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [election, electionId]);
 
   const checkFraudVoting = (userid, candidate) => {
     if (userid === candidate.candidate_id) {
@@ -113,12 +284,16 @@ export default function electionId() {
     }
   };
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#E8612D" />
       </SafeAreaView>
     );
+  }
+
+  if (hasVoted) {
+    return null; // Return nothing if user has voted
   }
 
   if (error) {
@@ -131,6 +306,17 @@ export default function electionId() {
       </SafeAreaView>
     );
   }
+
+  const renderTimer = () => (
+    <View style={styles.timerContainer}>
+      <Text style={styles.timerTitle}>Time Remaining:</Text>
+      <Text style={styles.timerText}>
+        {String(timeLeft.hours).padStart(2, "0")}:
+        {String(timeLeft.minutes).padStart(2, "0")}:
+        {String(timeLeft.seconds).padStart(2, "0")}
+      </Text>
+    </View>
+  );
 
   const renderCandidates = ({ item }) => {
     return (
@@ -214,6 +400,7 @@ export default function electionId() {
           </TouchableOpacity>
           <Text style={styles.heading}>Vote for Student Representative</Text>
         </View>
+        {renderTimer()}
         <View style={styles.processes}>
           <View style={styles.process}>
             <View style={styles.processImg}>
@@ -483,5 +670,24 @@ const styles = StyleSheet.create({
   retryText: {
     color: "white",
     fontWeight: "600",
+  },
+  timerContainer: {
+    backgroundColor: "#FEE4E2",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  timerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#E8612D",
+  },
+  timerText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#E8612D",
   },
 });

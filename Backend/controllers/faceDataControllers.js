@@ -189,8 +189,11 @@ export const getFaceData = async (req, res) => {
     const [rows] = await pool.query("SELECT * FROM faces WHERE userid = ?", [
       userid,
     ]);
-    if (rows.length > 0) {
-      res.status(200).json({ success: true, data: result.rows[0] });
+
+    if (rows.length > 0 && rows[0].image) {
+      const base64Image = rows[0].image.toString("base64");
+      res.setHeader("Content-Type", "application/json");
+      res.json({ image: `data:image/jpeg;base64,${base64Image}` });
     } else {
       res.status(404).json({ success: false, message: "Face data not found" });
     }

@@ -309,6 +309,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+    zIndex: 2,
   },
   sectionTitle: {
     fontSize: 16,

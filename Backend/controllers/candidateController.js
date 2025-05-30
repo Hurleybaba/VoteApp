@@ -125,3 +125,63 @@ export const getSingleCandidate = async (req, res) => {
       .json({ message: "Internal server error on getSingleCandidate" });
   }
 };
+
+export const registerCandidate = async (req, res) => {
+  try {
+    const { candidate_name, bio, manifesto, election_id } = req.body;
+
+    if (!candidate_name || !bio || !manifesto || !election_id) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: Missing user ID" });
+    }
+
+    //get the user
+    const [candidate] = await pool.query(
+      "SELECT * FROM users WHERE username = ?",
+      [candidate_name]
+    );
+
+    //get the candidate_id from the candidate result
+    const candidate_id = candidate[0].userid;
+
+    //check for existing candidate
+    const [existingCandidate] = await pool.query(
+      "SELECT * FROM candidates WHERE candidate_id = ? AND election_id = ?",
+      [candidate_id, election_id]
+    );
+
+    if (existingCandidate.length > 0) {
+      return res.status(400).json({ message: "Candidate already exists" });
+    }
+
+    //insert the candidate details
+    const [result] = await pool.query(
+      `INSERT INTO candidates (
+        candidate_id,
+        election_id,
+        bio,
+        manifesto
+      ) VALUES (?, ?, ?, ?)`, // Properly closed parentheses
+      [candidate_id, election_id, bio, manifesto]
+    );
+
+    if (result.affectedRows == 0) {
+      throw new Error("Failed to register candidate");
+    }
+
+    return res.status(201).json({
+      message: "Candidate registered successfully",
+      candidateId: candidate_id,
+    });
+  } catch (error) {
+    console.error("Error in registerCandidate:", error);
+    return res.status(500).json({
+      message: "Internal server error on registerCandidate",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};

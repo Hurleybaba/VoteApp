@@ -5,89 +5,162 @@ import {
   Text,
   View,
   StatusBar,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { COLORS } from "@/constants/theme";
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import image from "@/assets/images/success.png";
-import Button from "@/components/button";
+import axios from "axios";
+import { baseUrl } from "@/app/baseUrl";
 
-export default function electionId() {
+export default function VoteConfirmation() {
   const router = useRouter();
   const { electionId, candidateId } = useLocalSearchParams();
-  
-
-  const [user, setUser] = useState({});
-  const [candidate, setCandidate] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [voteRecorded, setVoteRecorded] = useState(false);
 
-  const getCandidate = async () => {
+  const fetchCandidateDetails = async () => {
     try {
-      setIsLoading(true);
-      const candidateData = await AsyncStorage.getItem("candidateData");
-
-      if (!candidateData) {
-        Alert.alert("Error", "Candidate data not found");
-        setError("Candidate not found");
-        return;
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication required");
       }
 
-      const parsedData = JSON.parse(candidateData);
-      if (!parsedData?.first_name) {
-        throw new Error("Invalid candidate data format");
-      }
+      const response = await axios.get(
+        `${baseUrl}/api/candidate/${candidateId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+        }
+      );
 
-      setCandidate(parsedData);
+      return response.data;
     } catch (error) {
-      console.error("Failed to load candidate:", error);
+      console.error("Failed to fetch candidate:", error);
+      throw error;
+    }
+  };
+
+  const recordVote = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("You are not logged in");
+      }
+
+      // First verify the candidate exists
+      const candidate = await fetchCandidateDetails();
+
+      const response = await axios.post(
+        `${baseUrl}/api/votes/record-vote/${electionId}/${candidateId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        console.log("Vote recorded successfully:", response.data);
+        await AsyncStorage.setItem(`voted_${electionId}`, "true");
+        setVoteRecorded(true);
+
+        // Navigate after 2 seconds (more user-friendly)
+        setTimeout(() => {
+          router.replace({
+            pathname: `/${electionId}/receipt/`,
+            params: { electionId, candidateId },
+          });
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || "Failed to record vote");
+      }
+    } catch (error) {
+      console.error("Voting error:", error);
       setError(error.message);
-      Alert.alert("Error", "Failed to load candidate data");
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        await AsyncStorage.removeItem("token");
+        Alert.alert("Session Expired", "Please login again", [
+          { text: "OK", onPress: () => router.replace("/index2") },
+        ]);
+      } else if (error.response?.status === 400) {
+        Alert.alert("Already Voted", "You have already voted in this election");
+      } else {
+        Alert.alert("Error", error.message || "Failed to submit vote");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.cont}>
-          <Text style={styles.huge}>Thank You!</Text>
-          <Text style={styles.huge}>Your vote was submitted successfully.</Text>
-          <Image source={image} style={styles.image} />
-        </View>
+  useEffect(() => {
+    recordVote();
+  }, []);
 
-        <View style={styles.innerContainer}>
-          <Text style={styles.small}>
-            The receipt is sent to your email address
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary.default} />
+        <Text style={styles.loadingText}>Processing your vote...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.retryText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <StatusBar barStyle="dark-content" translucent />
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          <Text style={styles.header}>Thank You!</Text>
+          <Text style={styles.subHeader}>
+            Your vote was submitted successfully.
           </Text>
-          <Button
-            text="VIEW RECIEPT"
-            buttonStyle={{
-              elevation: 5,
-              backgroundColor: "#E8612D",
-            }}
-            textStyle={{
-              fontSize: 18,
-              fontWeight: "bold",
-              color: "white",
-            }}
-            handlePress={() => {
-              router.replace({
-                pathname: `/${electionId}/receipt/`,
-                params: {
-                  electionId: electionId,
-                  candidateId: candidate.candidate_id,
-                },
-              });
-            }}
-          />
+
+          <Image source={image} style={styles.image} resizeMode="contain" />
+
+          <Text style={styles.footerText}>
+            The receipt is being sent to your email address
+          </Text>
+
+          {voteRecorded && (
+            <ActivityIndicator
+              size="small"
+              color={COLORS.primary.default}
+              style={styles.loader}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -96,40 +169,71 @@ export default function electionId() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 20,
-    padding: 10,
-    height: "100%",
   },
-  cont: {
-    marginTop: 30,
-    width: "80%",
-    alignSelf: "center",
+  content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 40,
+  },
+  header: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: COLORS.primary.default,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  subHeader: {
+    fontSize: 20,
+    textAlign: "center",
+    color: COLORS.text,
+    marginBottom: 30,
   },
   image: {
     width: 240,
     height: 240,
     marginVertical: 30,
   },
-  huge: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#E8612D",
+  footerText: {
+    fontSize: 16,
     textAlign: "center",
+    color: COLORS.textSecondary,
   },
-  small: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 20,
+    color: COLORS.text,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    color: COLORS.error,
     fontSize: 18,
     textAlign: "center",
     marginBottom: 20,
   },
-  innerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: 20,
+  retryButton: {
+    backgroundColor: COLORS.primary.default,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  loader: {
+    marginTop: 20,
   },
 });

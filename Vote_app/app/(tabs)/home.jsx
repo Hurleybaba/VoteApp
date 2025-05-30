@@ -12,6 +12,9 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Modal,
+  Animated,
+  TouchableWithoutFeedback,
 } from "react-native";
 import image from "@/assets/images/download.jpg";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,17 +31,22 @@ import {
   SHADOWS,
   BORDER_RADIUS,
 } from "@/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
 export default function Home() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState({});
   const [hasAcademicData, setHasAcademicData] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [kycVerified, setKycVerified] = useState(false);
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const scaleAnimation = useState(new Animated.Value(1))[0];
+  const menuAnimation = useState(new Animated.Value(0))[0];
 
   const checkFaceData = async (userId) => {
     try {
@@ -210,6 +218,144 @@ export default function Home() {
     });
   };
 
+  const animateMenu = (show) => {
+    Animated.parallel([
+      Animated.spring(scaleAnimation, {
+        toValue: show ? 0.9 : 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.spring(menuAnimation, {
+        toValue: show ? 1 : 0,
+        friction: 6,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const toggleAdminMenu = () => {
+    const newState = !showAdminMenu;
+    setShowAdminMenu(newState);
+    animateMenu(newState);
+  };
+
+  const handleMenuItemPress = (route) => {
+    toggleAdminMenu();
+    setTimeout(() => router.push(route), 300);
+  };
+
+  const renderAdminMenu = () => {
+    const translateY = menuAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [10, 0],
+    });
+
+    const opacity = menuAnimation;
+
+    if (user?.role !== "admin") return null;
+
+    return (
+      <View style={[styles.adminContainer, { bottom: insets.bottom + 70 }]}>
+        <Animated.View
+          style={[
+            styles.adminMenuContainer,
+            {
+              opacity,
+              transform: [{ translateY }],
+              pointerEvents: showAdminMenu ? "auto" : "none",
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuItemPress("/(admin)/election")}
+            activeOpacity={0.7}
+          >
+            <LinearGradient
+              colors={[COLORS.primary.light, COLORS.primary.default]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.menuIconBg}
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={20}
+                color={COLORS.neutral.white}
+              />
+            </LinearGradient>
+            <Text style={styles.menuItemText}>Create Election</Text>
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuItemPress("/(admin)/candidates")}
+            activeOpacity={0.7}
+          >
+            <LinearGradient
+              colors={[COLORS.primary.light, COLORS.primary.default]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.menuIconBg}
+            >
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={COLORS.neutral.white}
+              />
+            </LinearGradient>
+            <Text style={styles.menuItemText}>Register Candidates</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.fab,
+            {
+              transform: [
+                { scale: scaleAnimation },
+                {
+                  rotate: menuAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ["0deg", "45deg"],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <TouchableOpacity onPress={toggleAdminMenu} activeOpacity={0.8}>
+            <LinearGradient
+              colors={[COLORS.primary.light, COLORS.primary.default]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.fabGradient}
+            >
+              <Ionicons name="add" size={24} color={COLORS.neutral.white} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {showAdminMenu && (
+          <TouchableWithoutFeedback onPress={toggleAdminMenu}>
+            <Animated.View
+              style={[
+                styles.backdrop,
+                {
+                  opacity: menuAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 1],
+                  }),
+                },
+              ]}
+            />
+          </TouchableWithoutFeedback>
+        )}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -321,6 +467,7 @@ export default function Home() {
           </View>
         )}
       </ScrollView>
+      {renderAdminMenu()}
     </SafeAreaView>
   );
 }
@@ -499,5 +646,76 @@ const styles = StyleSheet.create({
   retryButton: {
     color: "#E8612D",
     fontWeight: "bold",
+  },
+  adminContainer: {
+    position: "absolute",
+    right: SPACING.xl,
+    alignItems: "flex-end",
+    zIndex: 100,
+  },
+  adminMenuContainer: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xs,
+    marginBottom: SPACING.md,
+    width: 220,
+    ...SHADOWS.lg,
+    elevation: 5,
+    zIndex: 102,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: SPACING.md,
+    gap: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  menuIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: BORDER_RADIUS.full,
+    justifyContent: "center",
+    alignItems: "center",
+    ...SHADOWS.sm,
+  },
+  menuItemText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.secondary.default,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    flex: 1,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: COLORS.neutral.gray[200],
+    marginHorizontal: SPACING.xs,
+  },
+  fab: {
+    borderRadius: BORDER_RADIUS.full,
+    ...SHADOWS.lg,
+    zIndex: 102,
+  },
+  fabGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.full,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: COLORS.primary.default,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  backdrop: {
+    position: "absolute",
+    top: -1000,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 101,
   },
 });

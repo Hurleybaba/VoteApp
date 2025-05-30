@@ -128,7 +128,6 @@ export default function News() {
 
   const handleElectionPress = (status, id) => {
     if (status === "ongoing") {
-      // `/(election)/${id}/indexx`);
       router.push({
         pathname: `/(election)/${id}/ended`,
         params: {
@@ -143,7 +142,12 @@ export default function News() {
         },
       });
     } else {
-      router.push(`/(election)/${id}/success`);
+      router.push({
+        pathname: `/(election)/${id}/upcoming`,
+        params: {
+          electionId: id,
+        },
+      });
     }
   };
 

@@ -6,8 +6,11 @@ import {
   View,
   TouchableOpacity,
   StatusBar,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,9 +18,135 @@ import { Ionicons } from "@expo/vector-icons";
 
 import image from "@/assets/images/success.png";
 import Button from "@/components/button";
+import axios from "axios";
+import { baseUrl } from "@/app/baseUrl";
 
 export default function electionId() {
   const router = useRouter();
+  const { electionId, candidateId } = useLocalSearchParams();
+
+  const [voteDetails, setVoteDetails] = useState({});
+
+  const [election, setElection] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailFailed, setEmailFailed] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [error, setError] = useState(null);
+
+  const getReceipt = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        Alert.alert("Error", "You are not logged in");
+        return;
+      }
+
+      const response = await axios.get(
+        `${baseUrl}/api/votes/get-vote-details/${electionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (response.status === 200) {
+        setVoteDetails(response.data.voteDetails);
+        return true;
+      } else {
+        throw new Error("Failed to fetch vote details");
+      }
+    } catch (error) {
+      console.error("Failed to fetch vote details:", error);
+      Alert.alert("Error", "Failed to fetch vote details");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendReceiptEmail = async () => {
+    try {
+      setEmailSending(true);
+      const token = await AsyncStorage.getItem("token");
+      const response = await axios.get(
+        `${baseUrl}/api/votes/send-receipt/${electionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setEmailSent(true);
+        setEmailFailed(false);
+        Alert.alert(
+          "Receipt Sent",
+          "A copy of your vote receipt has been sent to your email."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to send receipt:", error);
+      setEmailFailed(true);
+      if (!error.response?.status === 409) {
+        Alert.alert("Error", "Failed to send receipt. Please try again later.");
+      }
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const convertDate = (dateString) => {
+    const date = new Date(dateString);
+    const formatted = date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return formatted;
+  };
+
+  useEffect(() => {
+    const initializeReceipt = async () => {
+      const success = await getReceipt();
+      if (success && !emailSent) {
+        await sendReceiptEmail();
+      }
+    };
+
+    initializeReceipt();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#E8612D" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={getReceipt} style={styles.retryButton}>
+          <Text style={styles.retryText}>Try Again</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
       <StatusBar
@@ -38,34 +167,42 @@ export default function electionId() {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.electionTitle}>2025 LCU Elections</Text>
+            <Text style={styles.electionTitle}>2025 Elections</Text>
 
             <View style={styles.divider} />
 
             <View style={styles.infoSection}>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Date</Text>
-                <Text style={styles.value}>18/05/2025 2:20 PM</Text>
+                <Text style={styles.value}>
+                  {convertDate(voteDetails.voted_at)}
+                </Text>
               </View>
 
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Student</Text>
-                <Text style={styles.value}>Olakunke John Faheed</Text>
+                <Text
+                  style={styles.value}
+                >{`${voteDetails.voter_first_name} ${voteDetails.voter_last_name}`}</Text>
               </View>
 
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Voted for</Text>
-                <Text style={styles.value}>John Doe Ronaldo</Text>
+                <Text
+                  style={styles.value}
+                >{`${voteDetails.candidate_first_name} ${voteDetails.candidate_last_name}`}</Text>
               </View>
 
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Post</Text>
-                <Text style={styles.value}>Student Representative</Text>
+                <Text style={styles.value}>{voteDetails.election_title}</Text>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.label}>Ref. No.</Text>
-                <Text style={[styles.value, styles.refNo]}>A1287B56</Text>
+                <Text style={styles.label}>Ref No</Text>
+                <Text style={[styles.value, styles.refNo]}>
+                  {voteDetails.ref_no}
+                </Text>
               </View>
             </View>
 
@@ -76,11 +213,25 @@ export default function electionId() {
           </View>
         </View>
 
+        {emailFailed && !emailSent && !isLoading && (
+          <TouchableOpacity
+            style={styles.resendButton}
+            onPress={sendReceiptEmail}
+          >
+            <Ionicons name="mail" size={20} color="#E8612D" />
+            <Text style={styles.resendText}>Resend Receipt to Email</Text>
+          </TouchableOpacity>
+        )}
+
         <Button
           text="RETURN TO HOME"
-          buttonStyle={styles.homeButton}
+          buttonStyle={[
+            styles.homeButton,
+            emailSending && { backgroundColor: "#E8612D80" },
+          ]}
           textStyle={styles.buttonText}
           handlePress={() => router.replace("/(tabs)/home")}
+          disabled={emailSending}
         />
       </ScrollView>
     </SafeAreaView>
@@ -217,5 +368,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "white",
+  },
+  resendButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  resendText: {
+    color: "#E8612D",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
