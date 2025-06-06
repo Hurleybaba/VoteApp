@@ -4,6 +4,13 @@ import "./globals.css";
 import { PaperProvider, adaptNavigationTheme } from "react-native-paper";
 import { DefaultTheme as PaperDefaultTheme } from "react-native-paper";
 
+import { useEffect } from "react";
+import {
+  registerForPushNotificationsAsync,
+  saveExpoToken,
+  setupNotifications,
+} from "../utils/notificationHelper";
+
 const theme = {
   ...PaperDefaultTheme,
   colors: {
@@ -14,6 +21,26 @@ const theme = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      try {
+        await setupNotifications();
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          await saveExpoToken(token);
+          console.log(
+            "Successfully registered for notifications with token:",
+            token.data
+          );
+        }
+      } catch (error) {
+        console.error("Error initializing notifications:", error);
+      }
+    };
+
+    initializeNotifications();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>

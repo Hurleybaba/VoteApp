@@ -43,7 +43,8 @@ export default function News() {
   const router = useRouter();
 
   const [user, setUser] = useState({});
-  const [posts, setPosts] = useState({});
+  const [generalElections, setGeneralElections] = useState([]);
+  const [facultyElections, setFacultyElections] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -62,19 +63,22 @@ export default function News() {
       }
 
       const isUserVerified = await AsyncStorage.getItem("isUserVerified");
-
       setKycVerified(isUserVerified === "true");
+
       const response = await axios.get(`${baseUrl}/api/election`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Cache-Conrol": "no-cache",
+          "Cache-Control": "no-cache",
         },
         timeout: 15000,
       });
 
       if (response.status === 200) {
         setUser(response.data.user);
-        setPosts(response.data.posts);
+        // Split elections into general and faculty
+
+        setGeneralElections(response.data.posts);
+        setFacultyElections(response.data.facultyPosts);
       } else {
         throw new Error("Failed to fetch user/news data");
       }
@@ -82,7 +86,6 @@ export default function News() {
       console.error("Failed error:", error);
       setError(error.message);
 
-      // Clear invalid token and redirect
       if (error.response?.status === 401 || error.response?.status === 403) {
         await AsyncStorage.removeItem("token");
         router.replace("/index2");
@@ -102,51 +105,21 @@ export default function News() {
     checkLoginStatusAndFetchUser();
   }, []);
 
-  if (isLoading || Object.keys(user).length === 0) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary.default} />
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          onPress={checkLoginStatusAndFetchUser}
-          style={styles.retryButton}
-        >
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  console.log("User ID:", user?.userid);
-
   const handleElectionPress = (status, id) => {
     if (status === "ongoing") {
       router.push({
-        pathname: `/(election)/${id}/ended`,
-        params: {
-          electionId: id,
-        },
+        pathname: `/(election)/${id}/indexx`,
+        params: { electionId: id },
       });
     } else if (status === "ended") {
       router.push({
-        pathname: `/(election)/${id}/indexx`,
-        params: {
-          electionId: id,
-        },
+        pathname: `/(election)/${id}/ended`,
+        params: { electionId: id },
       });
     } else {
       router.push({
         pathname: `/(election)/${id}/upcoming`,
-        params: {
-          electionId: id,
-        },
+        params: { electionId: id },
       });
     }
   };
@@ -195,6 +168,51 @@ export default function News() {
       </TouchableOpacity>
     );
   };
+
+  const renderElectionSection = (title, elections) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {elections.length > 0 ? (
+        <FlatList
+          data={elections}
+          renderItem={renderElectionItem}
+          keyExtractor={(item) => item.election_id?.toString()}
+          scrollEnabled={false}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons
+            name="calendar-outline"
+            size={48}
+            color={COLORS.neutral.gray[300]}
+          />
+          <Text style={styles.emptyStateText}>No elections found</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary.default} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          onPress={checkLoginStatusAndFetchUser}
+          style={styles.retryButton}
+        >
+          <Text style={styles.retryText}>Try Again</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -263,27 +281,8 @@ export default function News() {
               />
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Elections</Text>
-              <FlatList
-                data={posts}
-                renderItem={renderElectionItem}
-                keyExtractor={(item) => item.election_id?.toString()}
-                ListEmptyComponent={
-                  <View style={styles.emptyState}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={48}
-                      color={COLORS.neutral.gray[300]}
-                    />
-                    <Text style={styles.emptyStateText}>
-                      No elections found
-                    </Text>
-                  </View>
-                }
-                scrollEnabled={false}
-              />
-            </View>
+            {renderElectionSection("General Elections", generalElections)}
+            {renderElectionSection("Faculty Elections", facultyElections)}
           </View>
         )}
       </ScrollView>
@@ -323,10 +322,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   sectionTitle: {
-    fontSize: TYPOGRAPHY.sizes.lg,
-    fontWeight: TYPOGRAPHY.weights.semibold,
+    fontSize: TYPOGRAPHY.sizes.xl,
+    fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.secondary.default,
     marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
   },
   newsCard: {
     flexDirection: "row",

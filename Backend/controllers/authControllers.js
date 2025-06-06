@@ -209,6 +209,72 @@ export const sendEmail = async (req, res) => {
   }
 };
 
+export const forgetPassword = async (req, res) => {
+  try {
+    const user = req.user;
+    const email = user.email;
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User is required" });
+    }
+
+    console.log("user from fp:", user.email);
+
+    console.log(`Generating OTP for email: ${user.email}`);
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const expiresAt = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
+    console.log(`Generated OTP: ${otp}`);
+
+    // Store OTP (in production, use a database)
+    otpStorage.set(email, { otp, expiresAt, attempts: 0 });
+
+    await sendOtpEmail(email, otp);
+    res.json({ success: true, message: "OTP sent" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to send OTP from the backend" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and password are required" });
+    }
+
+    //database logic to reset password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const [result] = await pool.query(
+      "UPDATE users SET password = ? WHERE email = ?",
+      [hashedPassword, email]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found or password update failed",
+      });
+    }
+    // Clear OTP after password reset
+    otpStorage.delete(email); // Clear OTP after successful reset
+    console.log(`Password reset successfully for email: ${email}`);
+    return res.json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Error in resetPassword:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const verifyOtp = async (req, res) => {
   const { email, otp } = req.body;
 

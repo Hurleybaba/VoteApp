@@ -6,106 +6,105 @@ import {
   View,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-
-import image from "@/assets/images/download.jpg";
-import Button from "@/components/button";
-import axios from "axios";
+import { Camera, CameraView } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { baseUrl } from "../../baseUrl";
+import axios from "axios";
 
-export default function electionId() {
+const WINDOW_HEIGHT = Dimensions.get("window").height;
+const CAPTURE_SIZE = Math.floor(WINDOW_HEIGHT * 0.08);
+
+const FaceDetectionScreen = () => {
   const router = useRouter();
-
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const cameraRef = useRef(null);
+  const [hasPermission, setHasPermission] = useState(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState(null);
-  const [faceData, setFaceData] = useState(null);
-  const [image1, setImage1] = use;
-  const [refreshing, setRefreshing] = useState(false);
 
-  const getFaceData = async (userid) => {
+  const requestPermission = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        console.error("No token found in AsyncStorage");
-        return;
+      console.log("Requesting camera permission...");
+      const { status: existingStatus } =
+        await Camera.getCameraPermissionsAsync();
+      console.log("Existing permission status:", existingStatus);
+
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        console.log("No existing permission, requesting...");
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        finalStatus = status;
+        console.log("New permission status:", status);
       }
 
-      const response = await axios.get(`${baseUrl}/api/face/${userid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000,
-      });
-
-      if (response.data?.image) {
-        // Access image from response.data
-        console.log("Face data fetched successfully");
-        console.log(response.data.image);
-        setFaceData(response.data.image); // This should now work
-      } else {
-        console.error("No face data found in response");
-      }
-    } catch (error) {
-      console.error("Error fetching face data:", error);
-      setError("Failed to load face data");
+      setHasPermission(finalStatus === "granted");
+    } catch (err) {
+      console.error("Error requesting camera permission:", err);
+      setError("Failed to request camera permission");
+      setHasPermission(false);
     }
-  };
-
-  const checkLoginStatusAndFetchUser = async () => {
-    setIsLoading(true);
-    setError(null);
-    const token = await AsyncStorage.getItem("token");
-
-    if (!token) {
-      router.replace("/index2");
-      return;
-    }
-    try {
-      const response = await axios.get(`${baseUrl}/api/auth/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Cache-Conrol": "no-cache",
-        },
-        timeout: 15000,
-      });
-
-      if (response.status === 200) {
-        if (!response.data?.user) {
-          throw new Error("Invalid user data structure");
-        }
-        setUser(response.data.user);
-
-        const faceDetails = await getFaceData(response.data.user.userid);
-      } else {
-        throw new Error("Failed to fetch user data");
-      }
-    } catch (error) {
-      console.error("Failed to fetch user:", error);
-      setError(error.message);
-
-      // Clear invalid token and redirect
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        await AsyncStorage.multiRemove(["token", "isUserVerified"]);
-        router.replace("/index2");
-      }
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    checkLoginStatusAndFetchUser();
   };
 
   useEffect(() => {
-    checkLoginStatusAndFetchUser();
+    requestPermission();
   }, []);
+
+  const captureAndSaveFace = async () => {
+    if (!cameraRef.current || isCapturing) return;
+
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 1,
+        base64: true,
+        skipProcessing: true,
+      });
+
+      await AsyncStorage.setItem("capturedFace", photo.base64);
+      router.push("/123/face2");
+    } catch (error) {
+      console.error("Error capturing face:", error);
+      setError("Failed to capture face");
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  if (hasPermission === null) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#E8612D" />
+        <Text style={styles.permissionText}>
+          Requesting camera permission...
+        </Text>
+      </View>
+    );
+  }
+
+  if (hasPermission === false) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.permissionText}>
+          No access to camera. Please grant camera permission to continue.
+        </Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={async () => {
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            setHasPermission(status === "granted");
+          }}
+        >
+          <Text style={styles.buttonText}>Request Permission</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
@@ -121,70 +120,65 @@ export default function electionId() {
           </TouchableOpacity>
           <Text style={styles.heading}>Vote for Student Representative</Text>
         </View>
-        <View style={styles.processes}>
-          <View style={styles.process}>
-            <View style={styles.processImg}>
-              <Text style={styles.number}>1</Text>
-            </View>
-            <Text style={styles.processText}>Choose Candidate</Text>
-          </View>
-          <View style={styles.process}>
-            <View style={styles.processImg}>
-              <Text style={styles.number}>2</Text>
-            </View>
-            <Text style={styles.processText}>ID Validation</Text>
-          </View>
-          <View style={styles.process}>
-            <View style={styles.processImg}>
-              <Text style={styles.number}>3</Text>
-            </View>
-            <Text style={styles.processText}>Facial Recognition</Text>
-          </View>
-          <View style={styles.process}>
-            <View style={styles.processImg2}>
-              <Text style={styles.number2}>4</Text>
-            </View>
-            <Text style={styles.processText}>Confirm Vote</Text>
-          </View>
-          <View style={styles.brokenLine}></View>
-        </View>
-        <Text style={styles.topic}>Facial recognition</Text>
+
+        <Text style={styles.topic}>Face Registration</Text>
         <View style={styles.innerContainer}>
           <View style={styles.rectangle}>
-            <View style={styles.outerCircle}>
-              <View style={styles.circle}></View>
+            {hasPermission && (
+              <CameraView
+                ref={cameraRef}
+                style={StyleSheet.absoluteFill}
+                facing="front"
+                ratio="16:9"
+              />
+            )}
+
+            {isCapturing && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#E8612D" />
+                <Text style={styles.loadingText}>Capturing...</Text>
+              </View>
+            )}
+
+            <View style={styles.captureGuide}>
+              <View style={[styles.guideLine, styles.guideLineHorizontal]} />
+              <View style={[styles.guideLine, styles.guideLineVertical]} />
+              <View style={styles.faceOutline} />
             </View>
           </View>
+
           <Text style={styles.direction}>
-            Place the device at the height of your face and do not move
+            Position your face within the circle and look directly at the camera
           </Text>
-          <Button
-            text="CONTINUE"
-            buttonStyle={{
-              elevation: 20,
-              backgroundColor: "#FDD8CD",
-            }}
-            textStyle={{
-              fontSize: 18,
-              fontWeight: "bold",
-              color: "white",
-            }}
-            handlePress={() => {
-              router.push("/electionId/confirm");
-            }}
-          />
+
+          {error && <Text style={styles.errorText}>{error}</Text>}
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              {
+                backgroundColor: "#E8612D",
+              },
+            ]}
+            onPress={captureAndSaveFace}
+            disabled={isCapturing || !hasPermission}
+          >
+            <Text style={styles.buttonText}>
+              {isCapturing ? "CAPTURING..." : "CAPTURE PHOTO"}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 20,
     padding: 10,
-    height: "100%",
   },
   up: {
     flexDirection: "row",
@@ -197,96 +191,109 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#E8612D",
   },
-  processes: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 30,
-    marginBottom: 24,
-  },
-  process: {
-    width: 60,
-    alignItems: "center",
-    gap: 5,
-  },
-  processImg: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#E8612D",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  processImg2: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#FAB09B",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  processText: {
-    fontSize: 12,
-    textAlign: "center",
-  },
-  number: {
-    fontWeight: "bold",
-    color: "white",
-  },
-  number2: {
-    fontWeight: "bold",
-  },
-  brokenLine: {
-    borderBottomWidth: 1,
-    position: "absolute",
-    borderStyle: "dashed",
-    borderColor: "#FAB09B",
-    top: 5,
-    width: "100%",
-    height: 10,
-    zIndex: -1,
-  },
   topic: {
-    paddingTop: 10,
-    fontSize: 18,
-    fontWeight: 600,
-    textAlign: "left",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginVertical: 20,
   },
   innerContainer: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
   },
   rectangle: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 310,
-    height: 310,
+    width: "100%",
+    height: 400,
     borderWidth: 3,
     borderColor: "#E8612D",
-    marginVertical: 30,
-  },
-  outerCircle: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 380,
-    height: 380,
-    borderRadius: 190,
-    backgroundColor: "white",
-  },
-  circle: {
-    alignSelf: "center",
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    borderWidth: 3,
-    borderColor: "#E8612D",
+    borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
   },
   direction: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: "center",
+    marginVertical: 20,
+    color: "#666",
+  },
+  button: {
+    width: "80%",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 20,
+    elevation: 3,
+  },
+  buttonText: {
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 26,
+    color: "white",
+  },
+  loadingContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  loadingText: {
+    color: "white",
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorText: {
+    color: "#FF3B30",
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: "center",
+  },
+  captureGuide: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  guideLine: {
+    position: "absolute",
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  guideLineHorizontal: {
+    left: "25%",
+    right: "25%",
+    height: 1,
+    top: "50%",
+  },
+  guideLineVertical: {
+    top: "25%",
+    bottom: "25%",
+    width: 1,
+    left: "50%",
+  },
+  faceOutline: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 2,
+    borderColor: "#E8612D",
+    borderStyle: "dashed",
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  permissionText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
   },
 });
+
+export default FaceDetectionScreen;

@@ -189,7 +189,7 @@ export const sendEmailWithReceipt = async (userEmail, pdfPath, voteDetails) => {
     });
 
     const mailOptions = {
-      from: process.env.USER,
+      from: `"E-Voting System" <${process.env.USER}>`,
       to: userEmail,
       subject: "Your Voting Receipt",
       html: `

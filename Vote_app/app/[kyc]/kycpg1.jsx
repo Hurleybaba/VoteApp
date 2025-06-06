@@ -157,7 +157,7 @@ export default function kycpg1() {
       if (res.data.success) {
         Alert.alert("Success", "Details sent successfully!");
         console.log("Response data:", res.data);
-        router.push({
+        router.replace({
           pathname: "/[kyc]/kycpg2",
           params: {
             userid: userid,

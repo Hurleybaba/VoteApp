@@ -8,6 +8,8 @@ import {
   StatusBar,
   Modal,
   View,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,14 +28,48 @@ export default function signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isFilled, setIsFilled] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState({});
+  const [showErrors, setShowErrors] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const setFormData = useFormStore((state) => state.setFormData);
   const formData = useFormStore((state) => state.formData);
 
+  const validateForm = () => {
+    let newErrors = {};
+    let isValid = true;
+
+    if (!password.trim()) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters long";
+      isValid = false;
+    }
+
+    if (!confirmPassword.trim()) {
+      newErrors.confirmPassword = "Please confirm your password";
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+
+    setError(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async () => {
+    setShowErrors(true);
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+
     const userDetails = {
       ...formData,
       password,
@@ -44,27 +80,26 @@ export default function signup() {
         `${baseUrl}/api/auth/signup`,
         userDetails
       );
-      console.log("Response:", response);
+
       if (response.status === 200 || response.status === 201) {
-        console.log("Data successfully sent to the server");
-
         const { token } = response.data;
-
-        // Store the token in AsyncStorage
         await AsyncStorage.setItem("token", token);
-
         setShowPopup(true);
 
         setTimeout(() => {
           setShowPopup(false);
           router.replace("/login");
         }, 3000);
-      } else {
-        console.error("Error sending data to the server");
       }
-    } catch (error) {
-      // setError(error);
-      console.error("Error sending data:", error);
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        err.response?.data?.message ||
+          "Failed to create account. Please try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,7 +107,8 @@ export default function signup() {
     if (
       password.trim() === "" ||
       confirmPassword.trim() === "" ||
-      password !== confirmPassword
+      password !== confirmPassword ||
+      password.length < 8
     ) {
       setIsFilled(false);
     } else {
@@ -108,6 +144,9 @@ export default function signup() {
           </TouchableOpacity>
 
           <Text style={styles.heading}>Set up a password</Text>
+          <Text style={styles.subheading}>
+            Password must be at least 8 characters long
+          </Text>
 
           <View style={styles.passwordContainer}>
             <Input
@@ -117,6 +156,8 @@ export default function signup() {
               onChangeText={setPassword}
               keyboardType="default"
               secureTextEntry={!showPassword}
+              error={error.password}
+              showErrors={showErrors}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
@@ -138,6 +179,8 @@ export default function signup() {
               onChangeText={setConfirmPassword}
               keyboardType="default"
               secureTextEntry={!showConfirmPassword}
+              error={error.confirmPassword}
+              showErrors={showErrors}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
@@ -152,24 +195,18 @@ export default function signup() {
           </View>
         </ScrollView>
         <Button
-          text="Continue"
-          disabled={!isFilled}
-          buttonStyle={
-            isFilled
-              ? {
-                  position: "absolute",
-                  bottom: 20,
-                  marginLeft: 20,
-                }
-              : {
-                  backgroundColor: "#DADADA",
-                  position: "absolute",
-                  bottom: 20,
-                  marginLeft: 20,
-                  width: "105%",
-                  left: "-2.5%",
-                }
+          text={
+            isLoading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              "Continue"
+            )
           }
+          disabled={!isFilled || isLoading}
+          buttonStyle={[
+            styles.button,
+            (!isFilled || isLoading) && styles.buttonDisabled,
+          ]}
           handlePress={handleSubmit}
         />
         <Modal visible={showPopup} transparent animationType="fade">
@@ -239,5 +276,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "green",
+  },
+  button: {
+    position: "absolute",
+    bottom: 20,
+    marginLeft: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: "#DADADA",
+    position: "absolute",
+    bottom: 20,
+    marginLeft: 20,
+    width: "105%",
+    left: "-2.5%",
   },
 });

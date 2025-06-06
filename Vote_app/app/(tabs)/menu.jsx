@@ -216,9 +216,19 @@ const menu = () => {
           end={{ x: 1, y: 1 }}
           style={styles.header}
         >
-          <View style={styles.circle}>
-            <Image source={profileImage} style={styles.profile} />
-          </View>
+          <TouchableOpacity
+            style={styles.circle}
+            onPress={() => router.push("/kyc/upload")}
+          >
+            <Image
+              source={user.profile_id ? { uri: user.profile_id } : profileImage}
+              style={styles.profile}
+              defaultSource={profileImage}
+            />
+            <View style={styles.editOverlay}>
+              <Ionicons name="camera" size={24} color={COLORS.neutral.white} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.nameContainer}>
             <Text style={styles.nameText}>{`${capitalize(
               user.first_name
@@ -245,7 +255,7 @@ const menu = () => {
             <View style={styles.setting}>
               <Text>Role</Text>
 
-              <Text style={styles.right}>User</Text>
+              <Text style={styles.right}>{user.role}</Text>
             </View>
             <View style={styles.setting}>
               <Text>Verified</Text>
@@ -420,15 +430,16 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     backgroundColor: COLORS.neutral.white,
     marginBottom: SPACING.md,
-    overflow: "hidden",
+    // overflow: "hidden",
     ...SHADOWS.md,
     borderWidth: 4,
     borderColor: COLORS.neutral.white,
+    position: "relative",
   },
   profile: {
     width: "100%",
     height: "100%",
-    borderRadius: 50,
+    borderRadius: 80,
   },
   nameContainer: {
     backgroundColor: "rgba(255, 255, 255, 0.9)",
@@ -578,5 +589,15 @@ const styles = StyleSheet.create({
   retryText: {
     color: COLORS.neutral.white,
     fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  editOverlay: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    backgroundColor: COLORS.primary.default,
+    borderRadius: BORDER_RADIUS.full,
+    padding: 8,
+    zIndex: 5,
+    ...SHADOWS.sm,
   },
 });

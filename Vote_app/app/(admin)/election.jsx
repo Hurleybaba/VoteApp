@@ -35,7 +35,13 @@ export default function Election() {
     faculty_name: "Law",
   });
 
-  const faculties = ["Law", "Applied Sciences", "Pharmacy", "Medical Sciences"];
+  const faculties = [
+    "Law",
+    "Applied Sciences",
+    "Pharmacy",
+    "Medical Sciences",
+    "General",
+  ];
 
   const isValidDate = (dateStr) => {
     // First check the format
@@ -180,6 +186,22 @@ export default function Election() {
       );
 
       if (response.status === 201) {
+        // Send notification to backend to notify users
+        await axios.post(
+          `${baseUrl}/api/notification/send-election-notification`,
+          {
+            faculty_name: formData.faculty_name,
+            election_name: formData.election_name,
+            election_id: response.data.election_id,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         Alert.alert("Success", "Election created successfully", [
           {
             text: "OK",

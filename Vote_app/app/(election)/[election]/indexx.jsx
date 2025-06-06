@@ -112,7 +112,7 @@ export default function electionId() {
         headers: {
           Authorization: `Bearer ${token}`,
           "Cache-Control": "no-cache",
-          "X-Election-ID": electionId,
+          "x-election-id": electionId,
         },
         timeout: 15000,
       });
@@ -125,6 +125,8 @@ export default function electionId() {
       }
     } catch (error) {
       console.error("Failed error:", error);
+      console.error("Error response data:", error.response?.data);
+      console.error("Error status:", error.response?.status);
       setError(error.message);
 
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -163,6 +165,23 @@ export default function electionId() {
 
       if (response.status === 200) {
         console.log("Election status changed successfully");
+
+        // Send notification about election ending
+        await axios.post(
+          `${baseUrl}/api/notification/send-status-notification`,
+          {
+            faculty_name: election.faculty_name,
+            election_name: election.election_name,
+            election_id: electionId,
+            new_status: "ended",
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         router.replace({
           pathname: `/(election)/${electionId}/ended`,
@@ -436,7 +455,7 @@ export default function electionId() {
             keyExtractor={(item) => item.candidate_id?.toString()}
             ListEmptyComponent={
               <Text style={{ textAlign: "center", padding: 20 }}>
-                No elections found
+                No Candidates Approved
               </Text>
             }
             scrollEnabled={false}
@@ -455,7 +474,7 @@ export default function electionId() {
             color: "white",
           }}
           handlePress={() => {
-            router.replace("/(tabs)/home");
+            router.replace("/(tabs)/news");
           }}
         />
       </ScrollView>

@@ -71,8 +71,8 @@ export const getAllVotes = async (req, res) => {
       pool.query(
         `SELECT 
     u.userid AS candidate_id,
-    c.bio,
-    c.manifesto,
+    MAX(c.bio) AS bio,
+    MAX(c.manifesto) AS manifesto,
     CONCAT(u.first_name, ' ', u.last_name) AS full_name,
     COUNT(v.vote_id) AS vote_count
 FROM 

@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -61,7 +62,6 @@ export default function login() {
     }
 
     setIsLoading(true);
-    setError({});
 
     const userDetails = {
       username: username.trim(),
@@ -75,17 +75,18 @@ export default function login() {
       );
 
       if (response.status === 200) {
-        console.log("User successfully logged in");
         const { token } = response.data;
         await AsyncStorage.setItem("token", token);
         router.push("/(tabs)/home");
       }
     } catch (err) {
-      setError({
-        general:
-          err.response?.data?.message || "Login failed. Please try again.",
-      });
-      console.error("Error sending data:", err);
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || err.response?.status === 401
+          ? "Invalid username or password"
+          : "Login failed. Please try again.",
+        [{ text: "OK" }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -128,13 +129,6 @@ export default function login() {
             </TouchableOpacity>
           </View>
 
-          {error.general && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={24} color="#EF4444" />
-              <Text style={styles.errorText}>{error.general}</Text>
-            </View>
-          )}
-
           <View style={styles.content}>
             <View style={styles.imageContainer}>
               <Image source={voteImg} style={styles.image} />
@@ -175,6 +169,15 @@ export default function login() {
                   />
                 </TouchableOpacity>
               </View>
+              <TouchableOpacity
+                onPress={() => router.push("/(auth)/forgot-password")}
+                style={styles.forgotPasswordContainer}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  Forgot your password?{" "}
+                  <Text style={styles.forgotPasswordLink}>Reset it here</Text>
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -299,5 +302,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#FDA4A4",
     shadowOpacity: 0,
     elevation: 0,
+  },
+  forgotPasswordContainer: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  forgotPasswordLink: {
+    color: "#E8612D",
+    fontWeight: "600",
   },
 });

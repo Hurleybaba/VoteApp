@@ -14,43 +14,54 @@ import { baseUrl } from "../baseUrl";
 
 export default function index() {
   const router = useRouter();
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
-      const token = await AsyncStorage.getItem("token");
+      try {
+        const token = await AsyncStorage.getItem("token");
 
-      if (token) {
-        try {
-          // Make a request to check if the token is valid
-          const response = await axios.get(`${baseUrl}/api/auth/user`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+        if (token) {
+          try {
+            const response = await axios.get(`${baseUrl}/api/auth/user`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
 
-          if (response.status === 200) {
-            // If the token is valid, navigate to the home screen
-            router.push("/(tabs)/home");
-          } else {
+            if (response.status === 200) {
+              router.push("/(tabs)/home");
+            } else {
+              router.push("/index2");
+            }
+          } catch (error) {
+            await AsyncStorage.removeItem("token");
+            if (error.response && error.response.status === 401) {
+              Alert.alert(
+                "Session Expired",
+                "Your session has expired. Please sign in again.",
+                [{ text: "OK" }]
+              );
+            } else {
+              Alert.alert(
+                "Error",
+                "Something went wrong. Please try again later.",
+                [{ text: "OK" }]
+              );
+            }
             router.push("/index2");
           }
-        } catch (error) {
-          console.error("Error verifying token:", error);
-          // If there was an error (e.g., token expired), navigate to the login page
-          if (error.response && error.response.status === 401) {
-            router.push("/index2");
-            Alert.alert("Session Terminated, please sign in again");
-          } else {
-            router.push("/index2");
-          }
-          await AsyncStorage.removeItem("token");
+        } else {
+          router.push("/index2");
         }
-      } else {
-        // If no token exists, navigate to the login page
+      } catch (error) {
+        Alert.alert(
+          "Error",
+          "Failed to check login status. Please try again.",
+          [{ text: "OK" }]
+        );
         router.push("/index2");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false); // Done checking login status
     };
 
     checkLoginStatus();
@@ -71,7 +82,7 @@ export default function index() {
     );
   }
 
-  return null; // No UI if we're redirecting
+  return null;
 }
 
 const styles = StyleSheet.create({

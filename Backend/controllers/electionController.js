@@ -6,41 +6,51 @@ export const getPosts = async (req, res) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ message: "No user ID found" });
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No user ID found" });
     }
 
-    // Fetch user data and elections data in parallel for better performance
-    const [user, elections] = await Promise.all([
-      pool.query(
-        "SELECT userid, username, email, age, phone, first_name, middle_name, last_name FROM users WHERE userid = ?",
-        [userId]
-      ),
+    // Fetch user data and elections data in parallel
+    const [userResult, generalElectionsResult, facultyElectionsResult] =
+      await Promise.all([
+        pool.query(
+          "SELECT userid, username, email, age, phone, first_name, middle_name, last_name FROM users WHERE userid = ?",
+          [userId]
+        ),
+        pool.query(
+          `SELECT e.* FROM elections e 
+         WHERE e.faculty_id = 'general'
+         ORDER BY e.start_date DESC`
+        ),
+        pool.query(
+          `SELECT e.* FROM elections e
+         JOIN academic_details a ON e.faculty_id = a.faculty_id
+         WHERE a.userid = ?
+         ORDER BY e.start_date DESC`,
+          [userId]
+        ),
+      ]);
 
-      pool.query(
-        `
-    SELECT e.* FROM elections e
-    JOIN academic_details a ON e.faculty_id = a.faculty_id
-    WHERE a.userid = ?
-    ORDER BY e.start_date DESC
-  `,
-        [userId]
-      ),
-    ]);
+    const user = userResult[0][0]; // Extract the user object
+    const generalElections = generalElectionsResult[0];
+    const facultyElections = facultyElectionsResult[0];
 
-    if (user[0].length === 0) {
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Return both user data and home content
     return res.status(200).json({
-      user: user[0][0], // First user from first array (result of query)
-      posts: elections[0], // All election data
+      user,
+      posts: generalElections,
+      facultyPosts: facultyElections,
     });
   } catch (error) {
     console.error("Error in getPosts:", error);
-    return res
-      .status(500)
-      .json({ message: "Internal server error on getPosts" });
+    return res.status(500).json({
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 //   try {
@@ -202,6 +212,7 @@ export const createElection = async (req, res) => {
       Law: 1250,
       "Medical Sciences": 1500,
       Pharmacy: 2100,
+      General: 2500,
     };
 
     const facultyId = faculties[faculty_name];

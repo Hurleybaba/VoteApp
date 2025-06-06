@@ -1,0 +1,214 @@
+VOTING APP INTERFACE NOTES
+=======================
+
+HOME SCREEN (home.jsx)
+---------------------
+Purpose: Main dashboard
+Features:
+- Profile section with photo
+- KYC verification banner
+- Ongoing elections list
+- Recent elections
+- Admin panel (admin only)
+
+Actions:
+- Update face data via profile
+- Start KYC verification
+- View election details
+- Admin: Create elections/manage candidates
+
+NEWS SCREEN (news.jsx)
+---------------------
+Purpose: Updates center
+Features:
+- News feed
+- Election status cards
+- Status indicators
+
+Actions:
+- Pull to refresh
+- View election details
+- Check status updates
+
+MENU SCREEN (menu.jsx)
+---------------------
+Purpose: Settings hub
+Features:
+- Profile management
+- App settings
+- Account options
+- Logout
+
+Actions:
+- Edit profile
+- Change preferences
+- Sign out
+
+ELECTION SCREENS
+---------------
+
+1. UPCOMING (upcoming.jsx)
+   Features:
+   - Election info
+   - Countdown timer
+   - Candidate list
+   - Rules section
+
+   Actions:
+   - View candidates
+   - Set reminders
+   - Read guidelines
+
+2. ONGOING (indexx.jsx)
+   Features:
+   - 4-step process:
+     * ID check
+     * Candidate selection
+     * Face verification
+     * Vote confirmation
+   - Live status updates
+
+   Actions:
+   - Select candidate
+   - Complete verification
+   - Submit vote
+
+3. ENDED (ended.jsx)
+   Features:
+   - Results display
+   - Vote counts
+   - Charts
+   - Statistics
+
+   Actions:
+   - View details
+   - Check analytics
+   - Share results
+
+ADDITIONAL SCREENS
+----------------
+
+CANDIDATE PROFILE
+Features:
+- Bio and photo
+- Campaign info
+- Background
+- Achievements
+
+Actions:
+- View full details
+- Read manifesto
+- Contact options
+
+RECEIPT SCREEN
+Features:
+- Vote confirmation
+- Timestamp
+- Security details
+
+Actions:
+- Save receipt
+- Share
+- Report issues
+
+KYC VERIFICATION
+--------------
+
+1. First Step (kycpg1.jsx)
+   Features:
+   - Department entry
+   - Faculty selection
+   - Matric number
+   - Level input
+
+   Actions:
+   - Fill details
+   - Validate info
+   - Proceed to face scan
+
+2. Second Step (kycpg2.jsx)
+   Features:
+   - Face capture
+   - Guide frame
+   - Progress indicator
+
+   Actions:
+   - Take photo
+   - Verify quality
+   - Complete KYC
+
+Note: All screens include error handling and back navigation.
+
+VOTING APP SCREENS
+
+1. HOME SCREEN
+-------------
+* Main dashboard view
+* Shows: profile, elections, KYC status
+* Admin users get extra controls
+* Click profile to update face data
+* Click elections to vote
+
+2. NEWS SCREEN
+-------------
+* Updates and announcements
+* Election status cards
+* Pull down to refresh
+* Click cards for details
+
+3. MENU SCREEN
+-------------
+* Settings and profile
+* Account management
+* App preferences
+* Logout option
+
+4. ELECTION SCREENS
+------------------
+A) Upcoming Elections
+   * Shows future elections
+   * Countdown timer
+   * Candidate lists
+   * Election rules
+
+B) Ongoing Elections
+   * Active voting interface
+   * 4-step process:
+     1. ID check
+     2. Pick candidate
+     3. Face scan
+     4. Confirm vote
+
+C) Ended Elections
+   * Results display
+   * Vote counts
+   * Winner info
+   * Statistics
+
+5. OTHER SCREENS
+---------------
+A) Candidate Profile
+   * Bio and photo
+   * Campaign info
+   * Background
+   * Contact details
+
+B) Receipt Screen
+   * Vote confirmation
+   * Time stamp
+   * Security info
+   * Share options
+
+6. KYC SCREENS
+-------------
+A) First Page
+   * Academic details
+   * Department
+   * Faculty
+   * Student ID
+
+B) Second Page
+   * Face registration
+   * Camera guide
+   * Upload status
+   * Verification

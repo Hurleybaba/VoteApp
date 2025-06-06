@@ -148,6 +148,7 @@ export const setAcademicData = async (req, res) => {
       Law: 1250,
       "Medical Sciences": 1500,
       Pharmacy: 2100,
+      General: 2500,
     };
 
     const facultyId = faculties[faculty];

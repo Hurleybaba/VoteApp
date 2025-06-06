@@ -70,7 +70,7 @@ export default function UpcomingElection() {
     }
   };
 
-  const changeElectionStatus = async () => {
+  const changeElectionStatus = async (status) => {
     try {
       const token = await AsyncStorage.getItem("token");
 
@@ -83,7 +83,7 @@ export default function UpcomingElection() {
       const response = await axios.put(
         `${baseUrl}/api/election/${electionId}/status`,
         {
-          status: "ongoing",
+          status: status,
         },
         {
           headers: {
@@ -96,6 +96,23 @@ export default function UpcomingElection() {
 
       if (response.status === 200) {
         console.log("Election status changed successfully");
+
+        // Send notification about status change
+        await axios.post(
+          `${baseUrl}/api/notification/send-status-notification`,
+          {
+            faculty_name: election.faculty_name,
+            election_name: election.election_name,
+            election_id: electionId,
+            new_status: status,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         router.replace({
           pathname: `/(election)/${electionId}/indexx`,
@@ -174,7 +191,7 @@ export default function UpcomingElection() {
             seconds: 0,
           });
 
-          await changeElectionStatus();
+          await changeElectionStatus("ongoing");
 
           return;
         }

@@ -40,6 +40,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState({});
   const [hasAcademicData, setHasAcademicData] = useState(false);
+  const [posts, setPosts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -105,6 +106,8 @@ export default function Home() {
 
           setHasAcademicData(academicDataExists);
         }
+
+        await getElections(token);
       } else {
         throw new Error("Failed to fetch user data");
       }
@@ -120,6 +123,33 @@ export default function Home() {
     } finally {
       setIsLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const getElections = async (token) => {
+    try {
+      const response = await axios.get(`${baseUrl}/api/election`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Conrol": "no-cache",
+        },
+        timeout: 15000,
+      });
+
+      if (response.status === 200) {
+        setPosts(response.data.facultyPosts);
+      } else {
+        throw new Error("Failed to fetch the news data");
+      }
+    } catch (error) {
+      console.error("Failed error:", error);
+      setError(error.message);
+
+      // Clear invalid token and redirect
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        await AsyncStorage.removeItem("token");
+        router.replace("/index2");
+      }
     }
   };
 
@@ -378,7 +408,22 @@ export default function Home() {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.profileSection}>
-            <Image source={image} style={styles.profileImage} />
+            <TouchableOpacity
+              onPress={() => router.push("/(election)/123/face")}
+            >
+              <Image
+                source={user.profile_id ? { uri: user.profile_id } : image}
+                style={styles.profileImage}
+                defaultSource={image}
+              />
+              <View style={styles.editOverlay}>
+                <Ionicons
+                  name="camera"
+                  size={20}
+                  color={COLORS.neutral.white}
+                />
+              </View>
+            </TouchableOpacity>
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeText}>Welcome back,</Text>
               <Text style={styles.username}>{capitalize(user.username)}</Text>
@@ -424,34 +469,112 @@ export default function Home() {
           <>
             <SectionHeader
               title="Ongoing Elections"
-              onSeeMore={() => router.push("/news")}
+              onSeeMore={
+                Object.values(posts).filter(
+                  (election) =>
+                    election.status === "ongoing" ||
+                    election.status === "upcoming"
+                ).length > 2
+                  ? () => router.push("/news")
+                  : null
+              }
             />
             <View style={styles.electionsContainer}>
-              <ElectionCard
-                title="Student Representative"
-                duration="April 8th - 10th"
-                status="Active"
-                onPress={() => router.push("/(election)/123")}
-              />
-              <ElectionCard
-                title="Department Head"
-                duration="April 15th - 17th"
-                status="Coming Soon"
-                onPress={() => {}}
-              />
+              {Object.values(posts).filter(
+                (election) =>
+                  election.status === "ongoing" ||
+                  election.status === "upcoming"
+              ).length > 0 ? (
+                Object.values(posts)
+                  .filter(
+                    (election) =>
+                      election.status === "ongoing" ||
+                      election.status === "upcoming"
+                  )
+                  .slice(0, 2)
+                  .map((election, index) => (
+                    <ElectionCard
+                      key={`ongoing-${election.election_id || index}`}
+                      title={election.election_name || "Election Title"}
+                      duration={
+                        election.created_at
+                          ? new Date(
+                              election.created_at.replace(" ", "T")
+                            ).toLocaleDateString()
+                          : ""
+                      }
+                      status={election.status}
+                      onPress={() =>
+                        router.push(`/(election)/${election.election_id}`)
+                      }
+                    />
+                  ))
+              ) : (
+                <View style={styles.emptyStateContainer}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={40}
+                    color={COLORS.neutral.gray[400]}
+                  />
+                  <Text style={styles.emptyStateText}>
+                    No active or upcoming elections
+                  </Text>
+                  <Text style={styles.emptyStateSubText}>
+                    New elections will appear here when available
+                  </Text>
+                </View>
+              )}
             </View>
 
             <SectionHeader
               title="Recent Elections"
-              onSeeMore={() => router.push("/news")}
+              onSeeMore={
+                Object.values(posts).filter(
+                  (election) => election.status === "ended"
+                ).length > 2
+                  ? () => router.push("/news")
+                  : null
+              }
             />
             <View style={styles.electionsContainer}>
-              <ElectionCard
-                title="Class Representative"
-                duration="March 1st - 3rd"
-                status="Completed"
-                onPress={() => {}}
-              />
+              {Object.values(posts).filter(
+                (election) => election.status === "ended"
+              ).length > 0 ? (
+                Object.values(posts)
+                  .filter((election) => election.status === "ended")
+                  .slice(0, 2)
+                  .map((election, index) => (
+                    <ElectionCard
+                      key={`ended-${election.election_id || index}`}
+                      title={election.election_name || "Election Title"}
+                      duration={
+                        election.created_at
+                          ? new Date(
+                              election.created_at.replace(" ", "T")
+                            ).toLocaleDateString()
+                          : ""
+                      }
+                      status={election.status}
+                      onPress={() =>
+                        router.push(`/(election)/${election.election_id}`)
+                      }
+                    />
+                  ))
+              ) : (
+                <View style={styles.emptyStateContainer}>
+                  <Ionicons
+                    name="time-outline"
+                    size={40}
+                    color={COLORS.neutral.gray[400]}
+                  />
+                  <Text style={styles.emptyStateText}>
+                    No completed elections yet
+                  </Text>
+                  <Text style={styles.emptyStateSubText}>
+                    Past elections will appear here once they are completed
+                  </Text>
+                </View>
+              )}
             </View>
           </>
         ) : (
@@ -498,6 +621,15 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 2,
     borderColor: COLORS.primary.light,
+  },
+  editOverlay: {
+    position: "absolute",
+    right: -5,
+    bottom: -5,
+    backgroundColor: COLORS.primary.default,
+    borderRadius: BORDER_RADIUS.full,
+    padding: 5,
+    ...SHADOWS.sm,
   },
   welcomeContainer: {
     marginLeft: SPACING.sm,
@@ -717,5 +849,28 @@ const styles = StyleSheet.create({
     bottom: -1000,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     zIndex: 101,
+  },
+  emptyStateContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.xl,
+    backgroundColor: COLORS.neutral.gray[50],
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.neutral.gray[200],
+    borderStyle: "dashed",
+    marginVertical: SPACING.sm,
+  },
+  emptyStateText: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.neutral.gray[600],
+    marginTop: SPACING.sm,
+  },
+  emptyStateSubText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.neutral.gray[500],
+    marginTop: SPACING.xs,
+    textAlign: "center",
   },
 });
