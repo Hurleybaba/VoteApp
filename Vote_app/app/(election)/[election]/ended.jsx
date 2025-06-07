@@ -93,8 +93,6 @@ export default function electionId() {
   const router = useRouter();
   const { electionId } = useLocalSearchParams();
 
-  console.log("elecion id:", electionId);
-
   const [user, setUser] = useState({});
   const [candidates, setCandidates] = useState([]);
   const [voteData, setVoteData] = useState([]);
@@ -102,6 +100,13 @@ export default function electionId() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [kycVerified, setKycVerified] = useState(false);
+  const [election, setElection] = useState(null);
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   const chartData = candidates.map((candidate, index) => ({
     value: candidate.votes || 0, // Now using the votes property we added
@@ -121,6 +126,7 @@ export default function electionId() {
         router.replace("/index2");
         return;
       }
+      console.log("election id:", electionId);
 
       const response = await axios.get(`${baseUrl}/api/votes`, {
         headers: {
@@ -182,15 +188,101 @@ export default function electionId() {
     }
   };
 
+  const getElectionDetails = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/index2");
+        return;
+      }
+
+      const response = await axios.get(
+        `${baseUrl}/api/election/${electionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (response.status === 200) {
+        setElection(response.data.election);
+      }
+    } catch (error) {
+      console.error("Error fetching election details:", error);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
-
     getCandidatesAndVotes();
+    getElectionDetails();
   };
 
   useEffect(() => {
     getCandidatesAndVotes();
+    getElectionDetails();
   }, []);
+
+  useEffect(() => {
+    if (!election?.end_date) return;
+
+    const endDate = new Date(election.end_date);
+    // const deletionDate = new Date(endDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days after end date
+    const deletionDate = new Date(endDate.getTime() + 15 * 60 * 1000); // 15 mins after end date
+
+    const timer = setInterval(async () => {
+      const now = new Date();
+      const timeUntilDeletion = deletionDate.getTime() - now.getTime();
+
+      // If election has been deleted
+      if (timeUntilDeletion <= 0) {
+        const response = await axios.put(
+          `${baseUrl}/api/election/${electionId}/status`,
+          {
+            status: "deleted",
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${await AsyncStorage.getItem("token")}`,
+            },
+          }
+        );
+        clearInterval(timer);
+        Alert.alert(
+          "Election Deleted",
+          "This election has been deleted. Redirecting to news page...",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(tabs)/news"),
+            },
+          ]
+        );
+        return;
+      }
+
+      // Calculate remaining time
+      const totalSeconds = Math.floor(timeUntilDeletion / 1000);
+      const totalMinutes = Math.floor(totalSeconds / 60);
+      const totalHours = Math.floor(totalMinutes / 60);
+      const days = Math.floor(totalHours / 24);
+      const hours = totalHours % 24;
+      const minutes = totalMinutes % 60;
+      const seconds = totalSeconds % 60;
+
+      setTimeLeft({
+        days,
+        hours,
+        minutes,
+        seconds,
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [election]);
 
   if (isLoading || !user) {
     return (
@@ -238,6 +330,16 @@ export default function electionId() {
             <Ionicons name="chevron-back-outline" size={24} color="#E8612D" />
           </TouchableOpacity>
           <Text style={styles.heading}>Election Results</Text>
+        </View>
+
+        <View style={styles.timerContainer}>
+          <Text style={styles.timerTitle}>Time until election deletion:</Text>
+          <Text style={styles.timerText}>
+            {String(timeLeft.days).padStart(2, "0")}D{" "}
+            {String(timeLeft.hours).padStart(2, "0")}H{" "}
+            {String(timeLeft.minutes).padStart(2, "0")}M{" "}
+            {String(timeLeft.seconds).padStart(2, "0")}S
+          </Text>
         </View>
 
         <Text style={styles.choose}>Current Vote Count</Text>
@@ -457,5 +559,26 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  timerContainer: {
+    backgroundColor: "#FEE4E2",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    flexDirection: "column",
+    gap: 8,
+  },
+  timerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#E8612D",
+    textAlign: "center",
+  },
+  timerText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#E8612D",
+    textAlign: "center",
+    letterSpacing: 1,
   },
 });

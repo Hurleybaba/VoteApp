@@ -19,14 +19,15 @@ export const getPosts = async (req, res) => {
           [userId]
         ),
         pool.query(
-          `SELECT e.* FROM elections e 
-         WHERE e.faculty_id = 'general'
+          `SELECT e.* FROM elections e
+         WHERE e.faculty_id = 2500
          ORDER BY e.start_date DESC`
         ),
         pool.query(
           `SELECT e.* FROM elections e
          JOIN academic_details a ON e.faculty_id = a.faculty_id
          WHERE a.userid = ?
+          AND e.status != 'deleted'
          ORDER BY e.start_date DESC`,
           [userId]
         ),
@@ -111,9 +112,26 @@ export const getSinglePost = async (req, res) => {
 
     // Fetch user data and elections data in parallel for better performance
     const [user, election] = await Promise.all([
-      pool.query("SELECT * FROM users WHERE userid = ?", [userId]),
-      pool.query("SELECT * FROM elections WHERE election_id = ?", [electionId]),
+      pool.query(`SELECT * FROM users WHERE userid = ?`, [userId]),
+      pool.query(
+        `SELECT 
+    e.*, 
+    DATE_ADD(e.start_date, INTERVAL e.duration HOUR) AS end_date
+FROM 
+    elections e
+WHERE 
+    e.election_id = ?`,
+        [electionId]
+      ),
     ]);
+
+    if (user[0].length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (election[0].length === 0) {
+      return res.status(404).json({ message: "Election not found" });
+    }
 
     if (user[0].length === 0) {
       return res.status(404).json({ message: "User not found" });

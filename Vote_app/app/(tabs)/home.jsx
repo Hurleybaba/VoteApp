@@ -84,7 +84,7 @@ export default function Home() {
       const response = await axios.get(`${baseUrl}/api/auth/user`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Cache-Conrol": "no-cache",
+          "Cache-Control": "no-cache",
         },
         timeout: 15000,
       });
@@ -131,7 +131,7 @@ export default function Home() {
       const response = await axios.get(`${baseUrl}/api/election`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Cache-Conrol": "no-cache",
+          "Cache-Control": "no-cache",
         },
         timeout: 15000,
       });

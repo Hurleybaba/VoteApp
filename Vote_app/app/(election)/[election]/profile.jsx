@@ -97,7 +97,62 @@ export default function profile() {
     getSpecificCandidate();
   };
 
-  const checkFraudVoting = (userid, candidateid) => {
+  const checkVoteStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/index2");
+        return false;
+      }
+
+      // Then verify with server
+      const voteStatusResponse = await axios.get(
+        `${baseUrl}/api/votes/check-status/${electionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (voteStatusResponse.data.hasVoted) {
+        // If server shows voted but local storage doesn't, update local storage
+        await AsyncStorage.setItem(`voted_${electionId}`, "true");
+        Alert.alert(
+          "Already Voted",
+          "You have already voted in this election.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(tabs)/news"),
+            },
+          ]
+        );
+        return true;
+      }
+
+      const localHasVoted = await AsyncStorage.getItem(`voted_${electionId}`);
+
+      //delete the async storage own if the server responds with false
+      if (voteStatusResponse.data.hasVoted === false && localHasVoted) {
+        await AsyncStorage.removeItem(`voted_${electionId}`);
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking vote status:", error);
+      return false;
+    }
+  };
+
+  const checkFraudVoting = async (userid, candidateid) => {
+    // First check if user has already voted
+    const hasVoted = await checkVoteStatus();
+    if (hasVoted) {
+      return;
+    }
+
+    // Then proceed with fraud check
     if (userid === candidateid) {
       showDialog();
     } else {

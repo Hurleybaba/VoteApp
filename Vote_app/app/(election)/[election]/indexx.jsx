@@ -226,13 +226,31 @@ export default function electionId() {
 
   const initializeData = async () => {
     setIsLoading(true);
-    const voted = await checkVoteStatus();
-    setHasVoted(voted);
-    if (!voted) {
-      await getCandidates();
-      await getElectionDetails();
-    }
+    await getCandidates();
+    await getElectionDetails();
     setIsLoading(false);
+  };
+
+  const checkFraudVoting = async (userid, candidate) => {
+    // First check if user has already voted
+    const hasVoted = await checkVoteStatus();
+    if (hasVoted) {
+      return;
+    }
+
+    // Then proceed with fraud check
+    if (userid === candidate.candidate_id) {
+      showDialog();
+    } else {
+      AsyncStorage.setItem("candidateData", JSON.stringify(candidate));
+      router.push({
+        pathname: `/${electionId}/confirm/`,
+        params: {
+          electionId: electionId,
+          candidateId: candidate.candidate_id,
+        },
+      });
+    }
   };
 
   const onRefresh = async () => {
@@ -287,21 +305,6 @@ export default function electionId() {
 
     return () => clearInterval(timer);
   }, [election, electionId]);
-
-  const checkFraudVoting = (userid, candidate) => {
-    if (userid === candidate.candidate_id) {
-      showDialog();
-    } else {
-      AsyncStorage.setItem("candidateData", JSON.stringify(candidate));
-      router.push({
-        pathname: `/${electionId}/confirm/`,
-        params: {
-          electionId: electionId,
-          candidateId: candidate.candidate_id,
-        },
-      });
-    }
-  };
 
   if (isLoading) {
     return (
