@@ -118,7 +118,7 @@ export default function login() {
         <ScrollView
           style={styles.scroll}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
         >
           <View style={styles.header}>
             <TouchableOpacity
