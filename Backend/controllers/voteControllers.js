@@ -19,7 +19,7 @@ export const checkVoteStatus = async (req, res) => {
         .json({ message: "Bad Request: Election ID required" });
     }
 
-    // Check if user is an admin
+    // Check if user is an admin or lecturer
     const [userResult] = await pool.query(
       `SELECT role FROM users WHERE userid = ?`,
       [userId]
@@ -33,6 +33,13 @@ export const checkVoteStatus = async (req, res) => {
       return res.status(403).json({
         message: "Admins are not allowed to vote in elections",
         isAdmin: true,
+      });
+    }
+
+    if (userResult[0].role === "lecturer") {
+      return res.status(403).json({
+        message: "Lecturers are not allowed to vote in elections",
+        isLecturer: true,
       });
     }
 
@@ -161,6 +168,22 @@ export const recordVote = async (req, res) => {
     if (!electionId || !candidateId) {
       return res.status(400).json({
         message: "Bad Request: Election ID and Candidate ID required",
+      });
+    }
+
+    // Check if user is an admin or lecturer
+    const [userResult] = await pool.query(
+      `SELECT role FROM users WHERE userid = ?`,
+      [userId]
+    );
+    if (userResult.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (["admin", "lecturer"].includes(userResult[0].role)) {
+      return res.status(403).json({
+        message: "This user role is not allowed to vote in elections",
+        isAdmin: userResult[0].role === "admin",
+        isLecturer: userResult[0].role === "lecturer",
       });
     }
 

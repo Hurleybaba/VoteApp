@@ -97,18 +97,37 @@ export default function electionId() {
       return false;
     } catch (error) {
       console.error("Error checking vote status:", error);
-      if (error.response?.data?.isAdmin) {
-        Alert.alert(
-          "Not Allowed",
-          "Admins are not allowed to vote in elections.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/(tabs)/home"),
-            },
-          ]
-        );
-        return true;
+      if (error.response?.status === 403) {
+        if (error.response?.data?.isAdmin) {
+          {
+            Alert.alert(
+              "Not Allowed",
+              "Admins are not allowed to vote in elections.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => router.replace("/(tabs)/news"),
+                },
+              ]
+            );
+            return true;
+          }
+        }
+        if (error.response?.data?.isLecturer) {
+          {
+            Alert.alert(
+              "Not Allowed",
+              "Lecturers are not allowed to take part in elections.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => router.replace("/(tabs)/news"),
+                },
+              ]
+            );
+            return true;
+          }
+        }
       }
       return false;
     }

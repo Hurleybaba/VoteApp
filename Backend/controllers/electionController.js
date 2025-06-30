@@ -21,6 +21,7 @@ export const getPosts = async (req, res) => {
         pool.query(
           `SELECT e.* FROM elections e
          WHERE e.faculty_id = 2500
+         AND e.status != 'deleted'
          ORDER BY e.start_date DESC`
         ),
         pool.query(

@@ -618,10 +618,7 @@ export default function Home() {
               <Text style={styles.username}>{capitalize(user.username)}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => router.push("/election/123/face")}
-          >
+          <TouchableOpacity style={styles.notificationButton}>
             <Ionicons
               name="notifications-outline"
               size={24}
