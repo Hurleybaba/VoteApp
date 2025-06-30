@@ -10,6 +10,7 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +34,9 @@ export default function RegisterCandidate() {
     manifesto: "",
     election_id: "",
   });
+  const [verifiedUsers, setVerifiedUsers] = useState([]);
+  const [loadingVerified, setLoadingVerified] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch upcoming elections for the picker
   useEffect(() => {
@@ -59,6 +63,7 @@ export default function RegisterCandidate() {
         );
 
         if (response.data) {
+          console.log("Elections data:", response.data);
           setElections(response.data);
           if (response.data.length > 0) {
             setFormData((prev) => ({
@@ -79,6 +84,44 @@ export default function RegisterCandidate() {
     };
 
     fetchElections();
+  }, []);
+
+  const getAllVerified = async () => {
+    try {
+      setLoadingVerified(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/index2");
+        return;
+      }
+
+      console.log("Fetching verified users...");
+      const response = await axios.get(
+        `${baseUrl}/api/general/verified-users`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data) {
+        console.log("Verified users received:", response.data.verifiedUsers);
+        setVerifiedUsers(response.data.verifiedUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching verified users:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message || "Failed to load verified users"
+      );
+    } finally {
+      setLoadingVerified(false);
+    }
+  };
+
+  useEffect(() => {
+    getAllVerified();
   }, []);
 
   const handleSubmit = async () => {
@@ -131,6 +174,15 @@ export default function RegisterCandidate() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchElections(), getAllVerified()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Show loading state while fetching elections
   if (loadingElections) {
     return (
@@ -158,7 +210,22 @@ export default function RegisterCandidate() {
           </TouchableOpacity>
           <Text style={styles.heading}>Register Candidate</Text>
         </View>
-        <View style={styles.noElectionsContainer}>
+        <ScrollView
+          contentContainerStyle={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 20,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#E8612D"]}
+              tintColor="#E8612D"
+            />
+          }
+        >
           <Text style={styles.noElectionsText}>
             No upcoming elections available
           </Text>
@@ -168,7 +235,7 @@ export default function RegisterCandidate() {
           >
             <Text style={styles.createElectionText}>Create an Election</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -195,21 +262,49 @@ export default function RegisterCandidate() {
           style={styles.content}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#E8612D"]}
+              tintColor="#E8612D"
+            />
+          }
         >
           <View style={styles.formGroup}>
             <View style={styles.labelContainer}>
               <Text style={styles.label}>Candidate Name</Text>
               <Asterisk />
             </View>
-            <TextInput
-              style={styles.input}
-              value={formData.candidate_name}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, candidate_name: text }))
-              }
-              placeholder="Enter candidate's full name"
-              placeholderTextColor="#9CA3AF"
-            />
+            {loadingVerified ? (
+              <View style={[styles.loadingContainer, { height: 50 }]}>
+                <ActivityIndicator size="small" color="#E8612D" />
+              </View>
+            ) : (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={formData.candidate_name}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, candidate_name: value }))
+                  }
+                  style={styles.picker}
+                >
+                  <Picker.Item
+                    label="Select a candidate"
+                    value=""
+                    color="#9CA3AF"
+                  />
+                  {verifiedUsers.map((user) => (
+                    <Picker.Item
+                      key={user.userid}
+                      label={`${user.username} - ${user.matric_no}`}
+                      value={user.username}
+                      color="#1F2937"
+                    />
+                  ))}
+                </Picker>
+              </View>
+            )}
           </View>
 
           <View style={styles.formGroup}>
@@ -266,7 +361,7 @@ export default function RegisterCandidate() {
                 {elections.map((election) => (
                   <Picker.Item
                     key={election.election_id}
-                    label={election.title}
+                    label={election.election_name}
                     value={election.election_id}
                     color="#1F2937"
                   />

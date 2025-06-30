@@ -83,7 +83,7 @@ export const getSingleCandidate = async (req, res) => {
         .status(401)
         .json({ message: "Unauthorized - No user ID found" });
     }
-
+    console.log("Candidate id: ", candidateId);
     if (!candidateId) {
       return res.status(400).json({ message: "Candidate ID is required" });
     }

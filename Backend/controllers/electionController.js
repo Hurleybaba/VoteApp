@@ -41,10 +41,11 @@ export const getPosts = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Ensure we're sending an array
     return res.status(200).json({
       user,
-      posts: generalElections,
-      facultyPosts: facultyElections,
+      posts: generalElections || [],
+      facultyPosts: facultyElections || [],
     });
   } catch (error) {
     console.error("Error in getPosts:", error);
@@ -116,7 +117,7 @@ export const getSinglePost = async (req, res) => {
       pool.query(
         `SELECT 
     e.*, 
-    DATE_ADD(e.start_date, INTERVAL e.duration HOUR) AS end_date
+    DATE_ADD(e.start_date, INTERVAL e.duration MINUTE) AS end_date
 FROM 
     elections e
 WHERE 
@@ -133,24 +134,17 @@ WHERE
       return res.status(404).json({ message: "Election not found" });
     }
 
-    if (user[0].length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (election[0].length === 0) {
-      return res.status(404).json({ message: "Election not found" });
-    }
-
-    // Return both user data and home content
+    // Return both user data and election content
     return res.status(200).json({
       user: user[0][0],
       election: election[0][0],
     });
   } catch (error) {
     console.error("Error in getSinglePost:", error);
-    return res
-      .status(500)
-      .json({ message: "Internal server error on getSinglePost" });
+    return res.status(500).json({
+      message: "Internal server error on getSinglePost",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
@@ -191,18 +185,11 @@ export const updateElectionStatus = async (req, res) => {
 export const createElection = async (req, res) => {
   try {
     const userId = req.userId;
-    const {
-      election_name,
-      title,
-      note,
-      start_date,
-      duration,
-      status,
-      faculty_name,
-    } = req.body;
+    const { election_name, note, start_date, duration, status, faculty_name } =
+      req.body;
 
     // Validate required fields
-    if (!election_name || !title || !start_date || !duration || !faculty_name) {
+    if (!election_name || !start_date || !duration || !faculty_name) {
       return res.status(400).json({
         message: "Missing required fields",
       });
@@ -249,17 +236,15 @@ export const createElection = async (req, res) => {
       `INSERT INTO elections (
         election_id,
         election_name,
-        title,
         note,
         start_date,
         duration,
         status,
         faculty_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         election_id,
         election_name,
-        title,
         note || null,
         start_date,
         duration,
@@ -295,14 +280,14 @@ export const getUpcomingElections = async (req, res) => {
   try {
     const [elections] = await pool.query(
       `SELECT 
-        election_id,
-        election_name,
-        title,
-        start_date,
-        duration,
-        faculty_id
+      election_id,
+      election_name,
+      start_date,
+      duration,
+      faculty_id,
+      status
       FROM elections 
-      WHERE faculty_id = ? AND status = 'upcoming'
+      WHERE (faculty_id = ? OR faculty_id = 2500) AND status = 'upcoming'
       ORDER BY start_date ASC`,
       [faculty_id]
     );
@@ -318,6 +303,7 @@ export const getUpcomingElections = async (req, res) => {
       start_date: new Date(election.start_date).toISOString(),
     }));
 
+    console.log("Sending elections data:", formattedElections);
     return res.status(200).json(formattedElections);
   } catch (error) {
     console.error("Error in getUpcomingElections:", error);

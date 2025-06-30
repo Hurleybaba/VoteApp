@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: SPACING.md,
   },
-  electionTitle: {
+  election: {
     fontSize: TYPOGRAPHY.sizes.md,
     fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.secondary.default,

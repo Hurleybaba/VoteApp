@@ -118,3 +118,78 @@ export const uploadProfilePicture = async (req, res) => {
     });
   }
 };
+
+export const getVerifiedUsers = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "No user ID found" });
+    }
+
+    console.log("Fetching verified users for user:", userId);
+
+    // First check if the tables exist and have the correct structure
+    try {
+      const [tables] = await pool.query(`
+        SELECT TABLE_NAME 
+        FROM information_schema.TABLES 
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME IN ('users', 'academic_details')
+      `);
+
+      console.log("Available tables:", tables);
+
+      if (tables.length !== 2) {
+        throw new Error("Required tables not found");
+      }
+    } catch (tableError) {
+      console.error("Table check error:", tableError);
+      throw new Error("Database structure error: " + tableError.message);
+    }
+
+    // Fetch verified users (users with academic details)
+    const [verifiedUsers] = await pool.query(
+      `SELECT DISTINCT u.userid, u.username, u.email, u.profile_id, a.matric_no
+      FROM users u
+      INNER JOIN academic_details a ON u.userid = a.userid
+      WHERE u.role = 'user'
+      AND u.userid NOT IN (
+          SELECT c.candidate_id
+          FROM candidates c
+      )
+      ORDER BY u.username ASC;`
+    );
+
+
+    console.log("Found verified users:", verifiedUsers);
+
+    if (!verifiedUsers || verifiedUsers.length === 0) {
+      return res.status(200).json({
+        success: true,
+        verifiedUsers: [],
+        message: "No verified users found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      verifiedUsers: verifiedUsers,
+    });
+  } catch (error) {
+    console.error("Error in getVerifiedUsers:", error);
+    console.error("Error stack:", error.stack);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error on getVerifiedUsers",
+      error:
+        process.env.NODE_ENV === "development"
+          ? {
+              message: error.message,
+              stack: error.stack,
+              code: error.code,
+            }
+          : undefined,
+    });
+  }
+};

@@ -81,7 +81,7 @@ export const generatePDF = async (voteDetails, refNo) => {
           label: "Voted for",
           value: `${voteDetails.candidate_first_name} ${voteDetails.candidate_last_name}`,
         },
-        { label: "Post", value: voteDetails.election_title },
+        { label: "Post", value: voteDetails.election_name },
       ];
 
       // Create a box for details

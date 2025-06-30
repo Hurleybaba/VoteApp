@@ -163,7 +163,7 @@ export default function login() {
                   onPress={() => setShowPassword(!showPassword)}
                 >
                   <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
                     size={24}
                     color="#6B7280"
                   />
@@ -176,6 +176,15 @@ export default function login() {
                 <Text style={styles.forgotPasswordText}>
                   Forgot your password?{" "}
                   <Text style={styles.forgotPasswordLink}>Reset it here</Text>
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/(auth)/signup")}
+                style={styles.forgotPasswordContainer}
+              >
+                <Text style={styles.forgotPasswordText2}>
+                  Don't have an account yet?{" "}
+                  <Text style={styles.forgotPasswordLink}>Sign up here</Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -275,7 +284,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: "absolute",
     right: 16,
-    top: "50%",
+    top: 40,
     zIndex: 1,
   },
   buttonWrapper: {
@@ -309,6 +318,10 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
+    color: "#6B7280",
+  },
+  forgotPasswordText2: {
+    fontSize: 12,
     color: "#6B7280",
   },
   forgotPasswordLink: {

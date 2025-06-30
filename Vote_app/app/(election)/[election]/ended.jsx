@@ -217,8 +217,9 @@ export default function electionId() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    getCandidatesAndVotes();
-    getElectionDetails();
+    Promise.all([getCandidatesAndVotes(), getElectionDetails()]).finally(() =>
+      setRefreshing(false)
+    );
   };
 
   useEffect(() => {

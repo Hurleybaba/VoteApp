@@ -191,8 +191,31 @@ const menu = () => {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
 
+  // Add icon helpers for each row
+  const rowIcons = {
+    role: "person-circle-outline",
+    verified: "shield-checkmark-outline",
+    pending: "shield-outline",
+    memberSince: "calendar-outline",
+    verifiedSince: "checkmark-done-outline",
+    name: "person-outline",
+    username: "at-outline",
+    age: "hourglass-outline",
+    email: "mail-outline",
+    phone: "call-outline",
+    faculty: "school-outline",
+    department: "business-outline",
+    matric: "barcode-outline",
+    level: "layers-outline",
+    themes: "color-palette-outline",
+    credits: "star-outline",
+    contact: "chatbubble-ellipses-outline",
+    licence: "document-text-outline",
+    password: "lock-closed-outline",
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.neutral.gray[50] }}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor="transparent"
@@ -210,6 +233,7 @@ const menu = () => {
         }
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
       >
+        {/* Profile Card */}
         <LinearGradient
           colors={["#E8612D", "#FAB09B"]}
           start={{ x: 0, y: 0 }}
@@ -248,56 +272,82 @@ const menu = () => {
             )}
           </View>
         </LinearGradient>
-
-        <View style={styles.parent}>
-          <Text style={styles.subtopic}>ACCOUNT INFORMATION</Text>
-          <View style={styles.settingContainer}>
-            <View style={styles.setting}>
-              <Text>Role</Text>
-
+        {/* Account Info Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons
+              name="person-circle-outline"
+              size={22}
+              color={COLORS.primary.default}
+            />
+            <Text style={styles.sectionHeader}>ACCOUNT INFORMATION</Text>
+          </View>
+          <View style={styles.settingContainer2}>
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.role}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Role</Text>
               <Text style={styles.right}>{user.role}</Text>
             </View>
-            <View style={styles.setting}>
-              <Text>Verified</Text>
-
-              {kycVerified ? (
-                <View style={styles.verificationStatus}>
-                  <View
-                    style={[styles.statusDot, { backgroundColor: "#10B981" }]}
-                  />
-                  <Text style={[styles.statusText, { color: "#10B981" }]}>
-                    Verified
-                  </Text>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={16}
-                    color={COLORS.feedback.success}
-                  />
-                </View>
-              ) : (
-                <View style={styles.verificationStatus}>
-                  <View
-                    style={[styles.statusDot, { backgroundColor: "#F59E0B" }]}
-                  />
-                  <Text style={[styles.statusText, { color: "#F59E0B" }]}>
-                    Pending
-                  </Text>
-                  <Ionicons name="alert-circle" size={16} color="#F59E0B" />
-                </View>
-              )}
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={kycVerified ? rowIcons.verified : rowIcons.pending}
+                size={18}
+                color={kycVerified ? "#10B981" : "#F59E0B"}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Verified</Text>
+              <View style={styles.verificationStatus}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: kycVerified ? "#10B981" : "#F59E0B" },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: kycVerified ? "#10B981" : "#F59E0B" },
+                  ]}
+                >
+                  {kycVerified ? "Verified" : "Pending"}
+                </Text>
+                <Ionicons
+                  name={kycVerified ? "checkmark-circle" : "alert-circle"}
+                  size={16}
+                  color={kycVerified ? COLORS.feedback.success : "#F59E0B"}
+                />
+              </View>
             </View>
-            <View style={styles.setting}>
-              <Text>Member Since</Text>
-
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.memberSince}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Member Since</Text>
               <Text style={styles.right}>
                 {user.created_at
                   ? new Date(user.created_at).toLocaleDateString()
                   : "N/A"}
               </Text>
             </View>
-            <View style={[styles.setting, styles.setting2]}>
-              <Text>Verified Since</Text>
-
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.verifiedSince}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Verified Since</Text>
               <Text style={styles.right}>
                 {academicData.verified_at
                   ? new Date(academicData.verified_at).toLocaleDateString()
@@ -306,108 +356,243 @@ const menu = () => {
             </View>
           </View>
         </View>
-        <View style={styles.parent}>
-          <Text style={styles.subtopic}>PERSONAL DETAILS</Text>
-          <View style={styles.settingContainer}>
-            <View style={styles.setting}>
-              <Text>Name</Text>
+        {/* Personal Details Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons
+              name="person-outline"
+              size={22}
+              color={COLORS.primary.default}
+            />
+            <Text style={styles.sectionHeader}>PERSONAL DETAILS</Text>
+          </View>
+          <View style={styles.settingContainer2}>
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.name}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Name</Text>
               <Text
                 style={styles.right2}
               >{`${user.last_name} ${user.first_name} ${user.middle_name}`}</Text>
             </View>
-            <View style={styles.setting}>
-              <Text>Username</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.username}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Username</Text>
               <Text style={styles.right}>{user.username}</Text>
             </View>
-            <View style={styles.setting}>
-              <Text>Age</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.age}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Age</Text>
               <Text style={styles.right}>{user.age}</Text>
             </View>
-
-            <View style={styles.setting}>
-              <Text>Email</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.email}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Email</Text>
               <Text style={styles.right2}>{user.email}</Text>
             </View>
-            <View style={[styles.setting, styles.setting2]}>
-              <Text>Phone Number</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.phone}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Phone Number</Text>
               <Text style={styles.right}>{user.phone}</Text>
             </View>
           </View>
         </View>
-        <View style={styles.parent}>
-          <Text style={styles.subtopic}>ACADEMIC DETAILS</Text>
-          <View style={styles.settingContainer}>
-            <View style={styles.setting}>
-              <Text>Faculty</Text>
+        {/* Academic Details Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons
+              name="school-outline"
+              size={22}
+              color={COLORS.primary.default}
+            />
+            <Text style={styles.sectionHeader}>ACADEMIC DETAILS</Text>
+          </View>
+          <View style={styles.settingContainer2}>
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.faculty}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Faculty</Text>
               <Text style={styles.right2}>{academicData.faculty_name}</Text>
             </View>
-            <View style={styles.setting}>
-              <Text>Department</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.department}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Department</Text>
               <Text style={styles.right2}>{academicData.department}</Text>
             </View>
-            <View style={styles.setting}>
-              <Text>Matric No</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.matric}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Matric No</Text>
               <Text style={styles.right}>{academicData.matric_no}</Text>
             </View>
-
-            <View style={[styles.setting, styles.setting2]}>
-              <Text>Level</Text>
+            <View style={styles.divider} />
+            <View style={styles.settingRow}>
+              <Ionicons
+                name={rowIcons.level}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Level</Text>
               <Text style={styles.right2}>{academicData.level}</Text>
             </View>
           </View>
         </View>
-        <View style={styles.parent}>
-          <Text style={styles.subtopic}>GENERAL</Text>
-          <View style={styles.settingContainer}>
-            <View style={styles.setting}>
-              <Text>Themes</Text>
+        {/* General Section Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons
+              name="settings-outline"
+              size={22}
+              color={COLORS.primary.default}
+            />
+            <Text style={styles.sectionHeader}>GENERAL</Text>
+          </View>
+          <View style={styles.settingContainer2}>
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+              <Ionicons
+                name={rowIcons.themes}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Themes</Text>
               <Ionicons
                 name="chevron-forward-outline"
                 size={22}
                 color="grey"
                 style={styles.backIcon}
               />
-            </View>
-            <View style={styles.setting}>
-              <Text>Credits</Text>
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+              <Ionicons
+                name={rowIcons.credits}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Credits</Text>
               <Ionicons
                 name="chevron-forward-outline"
                 size={22}
                 color="grey"
                 style={styles.backIcon}
               />
-            </View>
-            <View style={styles.setting}>
-              <Text>Contact</Text>
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+              <Ionicons
+                name={rowIcons.contact}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Contact</Text>
               <Ionicons
                 name="chevron-forward-outline"
                 size={22}
                 color="grey"
                 style={styles.backIcon}
               />
-            </View>
-            <View style={styles.setting}>
-              <Text>Licence & Agreement</Text>
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+              <Ionicons
+                name={rowIcons.licence}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Licence & Agreement</Text>
               <Ionicons
                 name="chevron-forward-outline"
                 size={22}
                 color="grey"
                 style={styles.backIcon}
               />
-            </View>
-            <View style={[styles.setting, styles.setting2]}>
-              <Text>Change Password</Text>
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
+              <Ionicons
+                name={rowIcons.password}
+                size={18}
+                color={COLORS.primary.default}
+                style={styles.rowIcon}
+              />
+              <Text style={styles.settingLabel}>Change Password</Text>
               <Ionicons
                 name="chevron-forward-outline"
                 size={22}
                 color="grey"
                 style={styles.backIcon}
               />
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
-        <TouchableOpacity style={styles.parent} onPress={() => logUserOut()}>
-          <Text style={styles.logout}>Log out</Text>
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => logUserOut()}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={[COLORS.feedback.error, "#F87171"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.logoutGradient}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={22}
+              color="#fff"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.logoutText}>Log out</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -474,7 +659,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   verifiedBadge: {
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 2,
   },
   unverifiedBadge: {
     backgroundColor: "rgba(245, 158, 11, 0.1)",
@@ -592,12 +783,116 @@ const styles = StyleSheet.create({
   },
   editOverlay: {
     position: "absolute",
-    right: 10,
-    bottom: 10,
+    right: 4,
+    bottom: 4,
     backgroundColor: COLORS.primary.default,
-    borderRadius: BORDER_RADIUS.full,
-    padding: 8,
-    zIndex: 5,
+    borderRadius: 20,
+    padding: 6,
+    zIndex: 2,
     ...SHADOWS.sm,
+  },
+  profileCard: {
+    paddingTop: 48,
+    paddingBottom: 32,
+    alignItems: "center",
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 16,
+    ...SHADOWS.md,
+  },
+  profileImageWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  profileCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.neutral.white,
+    borderWidth: 3,
+    borderColor: COLORS.neutral.white,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  adminBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: COLORS.primary.default,
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 2,
+  },
+  sectionCard: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 18,
+    marginHorizontal: 10,
+    // marginBottom: SPACING.md,
+    marginTop: 10,
+    padding: 16,
+    ...SHADOWS.sm,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  sectionHeader: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: COLORS.primary.default,
+    marginLeft: 4,
+    letterSpacing: 1,
+  },
+  settingContainer2: {
+    borderWidth: 0,
+    borderRadius: 10,
+    backgroundColor: "#f6f6f6",
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    justifyContent: "space-between",
+  },
+  settingLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.neutral.gray[700],
+    marginLeft: 8,
+  },
+  rowIcon: {
+    marginRight: 8,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    marginHorizontal: 4,
+  },
+  logoutButton: {
+    marginHorizontal: SPACING.lg,
+    marginTop: 24,
+    borderRadius: 24,
+    overflow: "hidden",
+    ...SHADOWS.md,
+  },
+  logoutGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 24,
+  },
+  logoutText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });

@@ -73,29 +73,43 @@ export default function electionId() {
       if (voteStatusResponse.data.hasVoted) {
         // If server shows voted but local storage doesn't, update local storage
         await AsyncStorage.setItem(`voted_${electionId}`, "true");
+        setHasVoted(true);
         Alert.alert(
           "Already Voted",
           "You have already voted in this election.",
           [
             {
               text: "OK",
-              onPress: () => router.replace("/(tabs)/news"),
+              onPress: () => router.replace("/(tabs)/home"),
             },
           ]
         );
         return true;
       }
 
+      // If server shows not voted but local storage shows voted, clear local storage
       const localHasVoted = await AsyncStorage.getItem(`voted_${electionId}`);
-
-      //delete the async storage own if the server responds with false
       if (voteStatusResponse.data.hasVoted === false && localHasVoted) {
         await AsyncStorage.removeItem(`voted_${electionId}`);
       }
 
+      setHasVoted(false);
       return false;
     } catch (error) {
       console.error("Error checking vote status:", error);
+      if (error.response?.data?.isAdmin) {
+        Alert.alert(
+          "Not Allowed",
+          "Admins are not allowed to vote in elections.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(tabs)/home"),
+            },
+          ]
+        );
+        return true;
+      }
       return false;
     }
   };
@@ -218,9 +232,19 @@ export default function electionId() {
 
       if (response.status === 200) {
         setElection(response.data.election);
+      } else {
+        throw new Error("Failed to fetch election details");
       }
     } catch (error) {
       console.error("Error fetching election details:", error);
+      setError(
+        error.response?.data?.message || "Failed to fetch election details"
+      );
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        await AsyncStorage.removeItem("token");
+        router.replace("/index2");
+      }
     }
   };
 
@@ -243,8 +267,8 @@ export default function electionId() {
       showDialog();
     } else {
       AsyncStorage.setItem("candidateData", JSON.stringify(candidate));
-      router.push({
-        pathname: `/${electionId}/confirm/`,
+      router.replace({
+        pathname: `/${electionId}/face/`,
         params: {
           electionId: electionId,
           candidateId: candidate.candidate_id,
@@ -266,7 +290,7 @@ export default function electionId() {
     if (!election?.start_date || !election?.duration) return;
 
     const startDate = new Date(election.start_date);
-    const durationMs = election.duration * 60 * 60 * 1000; // Convert hours to milliseconds
+    const durationMs = election.duration * 60 * 1000; // Convert minutes to milliseconds
     const endDate = new Date(startDate.getTime() + durationMs);
 
     const timer = setInterval(() => {

@@ -370,7 +370,7 @@ export default function ElectionDetails() {
     const timer = setInterval(() => {
       const now = new Date();
       const startDate = new Date(election.start_date);
-      const durationMs = election.duration * 60 * 60 * 1000;
+      const durationMs = election.duration * 60 * 1000;
       const endDate = new Date(startDate.getTime() + durationMs);
 
       if (election.status === "upcoming") {
@@ -469,7 +469,7 @@ export default function ElectionDetails() {
           <View style={styles.infoRow}>
             <Ionicons name="time-outline" size={20} color="#6B7280" />
             <Text style={styles.infoLabel}>Duration:</Text>
-            <Text style={styles.infoValue}>{election?.duration} hours</Text>
+            <Text style={styles.infoValue}>{election?.duration} minutes</Text>
           </View>
 
           <View style={styles.infoRow}>

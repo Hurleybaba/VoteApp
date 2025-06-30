@@ -61,11 +61,14 @@ export default function electionId() {
         setVoteDetails(response.data.voteDetails);
         return true;
       } else {
-        throw new Error("Failed to fetch vote details");
+        throw new Error("Failed to fetch vote details 1");
       }
     } catch (error) {
-      console.error("Failed to fetch vote details:", error);
-      Alert.alert("Error", "Failed to fetch vote details");
+      console.error("Failed to fetch vote details 2:", error);
+      Alert.alert(
+        "Error",
+        "Failed to fetch vote details. Please try again later."
+      );
       return false;
     } finally {
       setIsLoading(false);

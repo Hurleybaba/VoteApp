@@ -10,6 +10,7 @@ export default function Input({
   keyboardType,
   error,
   showErrors,
+  secureTextEntry,
 }) {
   return (
     <View style={styles.outerContainer}>
@@ -26,6 +27,7 @@ export default function Input({
         keyboardType={keyboardType}
         autoCapitalize="none"
         autoCorrect={false}
+        secureTextEntry={secureTextEntry}
         style={[styles.input, showErrors && error && styles.inputError]}
         placeholderTextColor="#868686"
       />

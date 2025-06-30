@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  RefreshControl,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -31,6 +32,7 @@ export default function UpcomingElection() {
   });
   const [candidates, setCandidates] = useState([]);
   const [loadingCandidates, setLoadingCandidates] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchElectionDetails = async () => {
     try {
@@ -150,6 +152,12 @@ export default function UpcomingElection() {
     } finally {
       setLoadingCandidates(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchElectionDetails(), fetchCandidates()]);
+    setRefreshing(false);
   };
 
   useEffect(() => {
@@ -286,6 +294,14 @@ export default function UpcomingElection() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#E8612D"]}
+            tintColor="#E8612D"
+          />
+        }
       >
         <View style={styles.card}>
           <View style={styles.electionHeader}>
@@ -323,7 +339,7 @@ export default function UpcomingElection() {
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={20} color="#6B7280" />
               <Text style={styles.infoLabel}>Duration:</Text>
-              <Text style={styles.infoValue}>{election?.duration} hours</Text>
+              <Text style={styles.infoValue}>{election?.duration} minutes</Text>
             </View>
 
             <View style={styles.infoRow}>

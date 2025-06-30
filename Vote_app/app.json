@@ -1,28 +1,31 @@
 {
   "expo": {
-    "name": "Vote_app",
-    "slug": "Vote_app",
+    "name": "iElect",
+    "slug": "iElect",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/logo4.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/images/logo4.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hurleybaba.voteapp"
+      "bundleIdentifier": "com.hurleybaba.iElect"
     },
     "android": {
-      "package": "com.hurleybaba.voteapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/logo2.png",
         "backgroundColor": "#ffffff"
       },
-      "googleServicesFile": "./google-services.json"
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.hurleybaba.iElect"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,15 +34,15 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/images/logo2.png",
           "color": "#ffffff",
-          "sounds": ["./assets/notification.wav"]
+          "sounds": ["./assets/images/notification.wav"]
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "c289276f-26ab-4500-adb9-e8ba177262d"
+        "projectId": "c289276f-26ab-4500-adb9-e8ba177262db"
       }
     }
   }

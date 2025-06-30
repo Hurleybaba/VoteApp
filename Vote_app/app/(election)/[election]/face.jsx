@@ -6,105 +6,149 @@ import {
   View,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
-  Dimensions,
+  Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
-import React, { useState, useEffect, useRef } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Camera, CameraView } from "expo-camera";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { baseUrl } from "../../baseUrl";
-import axios from "axios";
 
-const WINDOW_HEIGHT = Dimensions.get("window").height;
-const CAPTURE_SIZE = Math.floor(WINDOW_HEIGHT * 0.08);
+import image from "@/assets/images/download.jpg";
+import Button from "@/components/button";
+import { CameraView } from "expo-camera";
+import { useCamera } from "@/hooks/useCamera";
+import http from "@/utils/http";
 
-const FaceDetectionScreen = () => {
+export default function electionId() {
   const router = useRouter();
-  const cameraRef = useRef(null);
-  const [hasPermission, setHasPermission] = useState(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [error, setError] = useState(null);
+  const { cameraRef, processImage } = useCamera();
+  const [submitting, setSubmitting] = useState(false);
 
-  const requestPermission = async () => {
+  const { electionId, candidateId } = useLocalSearchParams();
+
+  const handleContinue = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
-      console.log("Requesting camera permission...");
-      const { status: existingStatus } =
-        await Camera.getCameraPermissionsAsync();
-      console.log("Existing permission status:", existingStatus);
+      console.log("Starting face verification process");
+      const { dataUrl } = await processImage();
+      console.log("Image processed successfully");
 
-      let finalStatus = existingStatus;
-      if (existingStatus !== "granted") {
-        console.log("No existing permission, requesting...");
-        const { status } = await Camera.requestCameraPermissionsAsync();
-        finalStatus = status;
-        console.log("New permission status:", status);
+      console.log("Sending verification request to server");
+      const { data } = await http.post("/api/face/vote/verify", {
+        image: dataUrl,
+      });
+      console.log("Server response received:", data);
+
+      if (data.data.Similarity > 80) {
+        console.log(
+          "Face verification successful, redirecting to confirm page"
+        );
+        return router.replace({
+          pathname: `/(election)/${electionId}/confirm`,
+          params: {
+            electionId: electionId,
+            candidateId: candidateId,
+          },
+        });
       }
 
-      setHasPermission(finalStatus === "granted");
-    } catch (err) {
-      console.error("Error requesting camera permission:", err);
-      setError("Failed to request camera permission");
-      setHasPermission(false);
-    }
-  };
-
-  useEffect(() => {
-    requestPermission();
-  }, []);
-
-  const captureAndSaveFace = async () => {
-    if (!cameraRef.current || isCapturing) return;
-
-    setIsCapturing(true);
-    try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 1,
-        base64: true,
-        skipProcessing: true,
-      });
-
-      await AsyncStorage.setItem("capturedFace", photo.base64);
-      router.push("/123/face2");
+      // Handle low similarity score
+      Alert.alert(
+        "Face Verification Failed",
+        "The face detected doesn't match your registered face. Please try again with better lighting and make sure your face is clearly visible.",
+        [
+          {
+            text: "Try Again",
+            style: "default",
+          },
+        ]
+      );
     } catch (error) {
-      console.error("Error capturing face:", error);
-      setError("Failed to capture face");
+      console.error("Face verification error:", error);
+      console.error("Error response:", error.response?.data);
+
+      let errorMessage = "Unable to complete facial recognition.";
+      let errorTitle = "Verification Error";
+
+      if (error.response?.data) {
+        const { errorType, message, details } = error.response.data;
+        console.log("Error type:", errorType);
+        console.log("Error message:", message);
+        console.log("Error details:", details);
+
+        switch (errorType) {
+          case "NO_IMAGE":
+            errorTitle = "No Image";
+            errorMessage =
+              "Please ensure your face is clearly visible in the camera.";
+            break;
+          case "INVALID_FORMAT":
+            errorTitle = "Invalid Image";
+            errorMessage =
+              "The image format is not supported. Please try again.";
+            break;
+          case "IMAGE_TOO_LARGE":
+            errorTitle = "Image Too Large";
+            errorMessage = "The image size is too large. Please try again.";
+            break;
+          case "NO_MATCH":
+            errorTitle = "No Face Match";
+            errorMessage =
+              "No matching face was found. Please ensure your face is clearly visible and try again.";
+            break;
+          case "LOW_SIMILARITY":
+            errorTitle = "Low Similarity";
+            errorMessage =
+              "The face detected doesn't match your registered face. Please try again with better lighting.";
+            break;
+          case "REKOGNITION_ERROR":
+            errorTitle = "Verification Failed";
+            errorMessage =
+              "Face verification failed. Please ensure your face is clearly visible and try again.";
+            break;
+          case "SERVER_ERROR":
+            errorTitle = "Server Error";
+            errorMessage = "An unexpected error occurred. Please try again.";
+            break;
+          default:
+            errorTitle = "Verification Error";
+            errorMessage =
+              message ||
+              "Please try again with better lighting and make sure your face is clearly visible.";
+        }
+
+        // Handle specific HTTP status codes
+        if (error.response.status === 404) {
+          errorTitle = "Face Data Not Found";
+          errorMessage = "Please complete your KYC verification first.";
+          router.replace("/(tabs)/home");
+          return;
+        } else if (
+          error.response.status === 401 ||
+          error.response.status === 403
+        ) {
+          errorTitle = "Session Expired";
+          errorMessage = "Please log in again to continue.";
+          router.replace("/index2");
+          return;
+        }
+      } else if (error.code === "ECONNABORTED") {
+        errorTitle = "Connection Timeout";
+        errorMessage =
+          "The request took too long. Please check your internet connection and try again.";
+      }
+
+      Alert.alert(errorTitle, errorMessage, [
+        {
+          text: "Try Again",
+          style: "default",
+        },
+      ]);
     } finally {
-      setIsCapturing(false);
+      setSubmitting(false);
     }
-  };
-
-  if (hasPermission === null) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#E8612D" />
-        <Text style={styles.permissionText}>
-          Requesting camera permission...
-        </Text>
-      </View>
-    );
-  }
-
-  if (hasPermission === false) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.permissionText}>
-          No access to camera. Please grant camera permission to continue.
-        </Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={async () => {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            setHasPermission(status === "granted");
-          }}
-        >
-          <Text style={styles.buttonText}>Request Permission</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  }, [submitting, processImage, electionId, candidateId, router]);
 
   return (
     <SafeAreaView style={{ flex: 1, width: "100%", height: "100%" }}>
@@ -120,58 +164,70 @@ const FaceDetectionScreen = () => {
           </TouchableOpacity>
           <Text style={styles.heading}>Vote for Student Representative</Text>
         </View>
-
-        <Text style={styles.topic}>Face Registration</Text>
+        <View style={styles.processes}>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>1</Text>
+            </View>
+            <Text style={styles.processText}>Choose Candidate</Text>
+          </View>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>2</Text>
+            </View>
+            <Text style={styles.processText}>ID Validation</Text>
+          </View>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>3</Text>
+            </View>
+            <Text style={styles.processText}>Facial Recognition</Text>
+          </View>
+          <View style={styles.process}>
+            <View style={styles.processImg2}>
+              <Text style={styles.number2}>4</Text>
+            </View>
+            <Text style={styles.processText}>Confirm Vote</Text>
+          </View>
+          <View style={styles.brokenLine}></View>
+        </View>
+        <Text style={styles.topic}>Facial recognition</Text>
         <View style={styles.innerContainer}>
           <View style={styles.rectangle}>
-            {hasPermission && (
+            <View style={styles.outerCircle}>
               <CameraView
                 ref={cameraRef}
-                style={StyleSheet.absoluteFill}
+                style={styles.camera}
                 facing="front"
-                ratio="16:9"
-              />
-            )}
-
-            {isCapturing && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#E8612D" />
-                <Text style={styles.loadingText}>Capturing...</Text>
-              </View>
-            )}
-
-            <View style={styles.captureGuide}>
-              <View style={[styles.guideLine, styles.guideLineHorizontal]} />
-              <View style={[styles.guideLine, styles.guideLineVertical]} />
-              <View style={styles.faceOutline} />
+                // ratio="16:9"
+              >
+                <View style={styles.circle}></View>
+              </CameraView>
             </View>
           </View>
-
           <Text style={styles.direction}>
-            Position your face within the circle and look directly at the camera
+            Place the device at the height of your face and do not move
           </Text>
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              {
-                backgroundColor: "#E8612D",
-              },
-            ]}
-            onPress={captureAndSaveFace}
-            disabled={isCapturing || !hasPermission}
-          >
-            <Text style={styles.buttonText}>
-              {isCapturing ? "CAPTURING..." : "CAPTURE PHOTO"}
-            </Text>
-          </TouchableOpacity>
+          <Button
+            text={submitting ? "Verifying..." : "CONTINUE"}
+            buttonStyle={{
+              elevation: 20,
+              backgroundColor: submitting ? "#FDD8CD" : "#E8612D",
+            }}
+            textStyle={{
+              fontSize: 18,
+              fontWeight: "bold",
+              color: "white",
+            }}
+            handlePress={() => {
+              handleContinue();
+            }}
+          ></Button>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -179,6 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingHorizontal: 20,
     padding: 10,
+    height: "100%",
   },
   up: {
     flexDirection: "row",
@@ -191,109 +248,100 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#E8612D",
   },
-  topic: {
-    fontSize: 24,
+  processes: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 30,
+    marginBottom: 24,
+  },
+  process: {
+    width: 60,
+    alignItems: "center",
+    gap: 5,
+  },
+  processImg: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#E8612D",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  processImg2: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#FAB09B",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  processText: {
+    fontSize: 12,
+    textAlign: "center",
+  },
+  number: {
     fontWeight: "bold",
-    marginVertical: 20,
+    color: "white",
+  },
+  number2: {
+    fontWeight: "bold",
+  },
+  brokenLine: {
+    borderBottomWidth: 1,
+    position: "absolute",
+    borderStyle: "dashed",
+    borderColor: "#FAB09B",
+    top: 5,
+    width: "100%",
+    height: 10,
+    zIndex: -1,
+  },
+  topic: {
+    paddingTop: 10,
+    fontSize: 18,
+    fontWeight: 600,
+    textAlign: "left",
   },
   innerContainer: {
     flex: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
   rectangle: {
-    width: "100%",
-    height: 400,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 310,
+    height: 310,
     borderWidth: 3,
     borderColor: "#E8612D",
-    borderRadius: 10,
-    overflow: "hidden",
-    position: "relative",
+    marginVertical: 30,
+  },
+  outerCircle: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 380,
+    height: 380,
+    borderRadius: 190,
+    backgroundColor: "white",
+  },
+  circle: {
+    alignSelf: "center",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    borderWidth: 3,
+    borderColor: "#E8612D",
   },
   direction: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
-    marginVertical: 20,
-    color: "#666",
-  },
-  button: {
-    width: "80%",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 20,
-    elevation: 3,
-  },
-  buttonText: {
-    fontSize: 18,
     fontWeight: "bold",
-    color: "white",
+    marginBottom: 26,
   },
-  loadingContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  loadingText: {
-    color: "white",
-    marginTop: 10,
-    fontSize: 16,
-  },
-  errorText: {
-    color: "#FF3B30",
-    fontSize: 16,
-    marginTop: 10,
-    textAlign: "center",
-  },
-  captureGuide: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  guideLine: {
-    position: "absolute",
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
-  guideLineHorizontal: {
-    left: "25%",
-    right: "25%",
-    height: 1,
-    top: "50%",
-  },
-  guideLineVertical: {
-    top: "25%",
-    bottom: "25%",
-    width: 1,
-    left: "50%",
-  },
-  faceOutline: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 2,
-    borderColor: "#E8612D",
-    borderStyle: "dashed",
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  permissionText: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 20,
+
+  camera: {
+    borderRadius: 150,
   },
 });
-
-export default FaceDetectionScreen;

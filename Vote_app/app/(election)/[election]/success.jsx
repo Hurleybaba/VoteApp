@@ -25,6 +25,9 @@ export default function VoteConfirmation() {
   const [error, setError] = useState(null);
   const [voteRecorded, setVoteRecorded] = useState(false);
 
+  const [user, setUser] = useState({});
+  const [candidate, setCandidate] = useState({});
+
   const fetchCandidateDetails = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -41,8 +44,13 @@ export default function VoteConfirmation() {
           },
         }
       );
-
-      return response.data;
+      console.log("response", response.data);
+      if (response.status === 200) {
+        setCandidate(response.data.candidate);
+        setUser(response.data.user);
+      } else {
+        throw new Error("Failed to fetch candidate details");
+      }
     } catch (error) {
       console.error("Failed to fetch candidate:", error);
       throw error;
@@ -58,9 +66,36 @@ export default function VoteConfirmation() {
       if (!token) {
         throw new Error("You are not logged in");
       }
+      console.log("candidate id here", candidateId);
+      console.log("Election id here", electionId);
+      if (!electionId || !candidateId) {
+        throw new Error("Invalid election or candidate selected");
+      }
 
       // First verify the candidate exists
-      const candidate = await fetchCandidateDetails();
+      const candidateResponse = await axios.get(
+        `${baseUrl}/api/candidate/${candidateId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+          },
+        }
+      );
+
+      if (!candidateResponse.data.candidate) {
+        throw new Error("Failed to fetch candidate details");
+      }
+
+      const candidateData = candidateResponse.data.candidate;
+      console.log("Candidate data:", candidateData);
+      console.log("CandidateId from params:", candidateId);
+      console.log("ElectionId from params:", electionId);
+
+      // Verify the candidate belongs to the correct election
+      if (candidateData.election_id !== electionId) {
+        throw new Error("Candidate does not belong to this election");
+      }
 
       const response = await axios.post(
         `${baseUrl}/api/votes/record-vote/${electionId}/${candidateId}`,
@@ -78,11 +113,13 @@ export default function VoteConfirmation() {
         console.log("Vote recorded successfully:", response.data);
         await AsyncStorage.setItem(`voted_${electionId}`, "true");
         setVoteRecorded(true);
+        setCandidate(candidateData);
+        setUser(candidateResponse.data.user);
 
         // Navigate after 2 seconds (more user-friendly)
         setTimeout(() => {
           router.replace({
-            pathname: `/${electionId}/receipt/`,
+            pathname: `/(election)/${electionId}/receipt`,
             params: { electionId, candidateId },
           });
         }, 2000);

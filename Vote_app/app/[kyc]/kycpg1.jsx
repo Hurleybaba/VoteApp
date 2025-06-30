@@ -26,7 +26,7 @@ import Picker from "../../components/picker";
 
 export default function kycpg1() {
   const [department, setDepartment] = useState("");
-  const [faculty, setFaculty] = useState("");
+  const [faculty, setFaculty] = useState("Applied Sciences");
   const [matricNo, setMatricNo] = useState("");
   const [level, setLevel] = useState("");
 
@@ -164,17 +164,59 @@ export default function kycpg1() {
           },
         }); // Navigate to next screen
       } else {
-        Alert.alert("Error", res.data.message || "Failed to send details");
+        throw new Error(res.data.message || "Failed to send details");
       }
     } catch (err) {
       console.error("Full error:", err);
 
       let errorMessage = "Failed to send details. Please try again.";
+
+      // Check for specific error types from backend
+      if (err.response?.data?.errorType === "MATRIC_NOT_FOUND") {
+        errorMessage =
+          "Your details are not found in the department database. Please verify your matric number.";
+        Alert.alert("Verification Failed", errorMessage, [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/home"),
+          },
+        ]);
+        return;
+      }
+
+      if (err.response?.data?.errorType === "DUPLICATE_MATRIC") {
+        errorMessage =
+          "This matric number has already been registered. Please contact support if this is an error.";
+        Alert.alert("Registration Failed", errorMessage, [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/home"),
+          },
+        ]);
+        return;
+      }
+
+      // Handle other error cases
       if (err.code === "ECONNABORTED") {
         errorMessage = "Request timed out. Please try again.";
       } else if (err.response) {
-        errorMessage =
-          err.response.data?.message || `Server error: ${err.response.status}`;
+        if (err.response.status === 401 || err.response.status === 403) {
+          // Token is invalid or unauthorized
+          AsyncStorage.removeItem("token"); // Clear the invalid token
+          errorMessage =
+            "Your session has expired or is invalid. Please log in again.";
+          Alert.alert("Session Expired", errorMessage, [
+            {
+              text: "OK",
+              onPress: () => router.replace("/login"),
+            },
+          ]);
+          return;
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        } else {
+          errorMessage = `Server Error: ${err.response.status}`;
+        }
       } else if (err.request) {
         errorMessage = "No response from server. Check your connection.";
       }

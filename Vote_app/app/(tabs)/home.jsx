@@ -22,7 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { baseUrl } from "../baseUrl";
 import axios from "axios";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   COLORS,
@@ -48,6 +48,7 @@ export default function Home() {
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   const scaleAnimation = useState(new Animated.Value(1))[0];
   const menuAnimation = useState(new Animated.Value(0))[0];
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const checkFaceData = async (userId) => {
     try {
@@ -58,7 +59,7 @@ export default function Home() {
         },
       });
 
-      console.log("Token:", token);
+      console.log("Academic data response:", response.data);
 
       // Check based on your backend response structure
       if (response.data.success && response.data.userAcademicData) {
@@ -67,6 +68,53 @@ export default function Home() {
       return false;
     } catch (error) {
       console.error("Error checking academic data:", error);
+
+      // Handle specific error types from backend
+      if (error.response?.data?.errorType) {
+        switch (error.response.data.errorType) {
+          case "MISSING_USERID":
+            console.log("User ID is missing");
+            break;
+          case "USER_NOT_FOUND":
+            console.log("User not found in database");
+            break;
+          case "NO_ACADEMIC_DATA":
+            console.log("No academic data found for user");
+            return false;
+          case "DATABASE_ERROR":
+            console.log(
+              "Database error occurred:",
+              error.response.data.message
+            );
+            break;
+          case "SERVER_ERROR":
+            console.log("Server error occurred:", error.response.data.message);
+            break;
+          default:
+            console.log("Unknown error type:", error.response.data.errorType);
+        }
+      }
+
+      // Handle HTTP status codes
+      if (error.response) {
+        if (error.response.status === 401 || error.response.status === 403) {
+          console.log("Session expired or unauthorized");
+          await AsyncStorage.multiRemove(["token", "isUserVerified"]);
+          router.replace("/index2");
+          return false;
+        }
+
+        if (error.response.status === 404) {
+          console.log("Resource not found");
+          return false;
+        }
+      } else if (error.request) {
+        console.log("No response received from server");
+      } else {
+        console.log("Error setting up request:", error.message);
+      }
+
+      // Return false for any error case
       return false;
     }
   };
@@ -100,11 +148,15 @@ export default function Home() {
         await AsyncStorage.setItem("isUserVerified", isVerified.toString());
 
         if (!isVerified) {
-          const academicDataExists = await checkFaceData(
-            response.data.user.userid
-          );
-
-          setHasAcademicData(academicDataExists);
+          try {
+            const academicDataExists = await checkFaceData(
+              response.data.user.userid
+            );
+            setHasAcademicData(academicDataExists);
+          } catch (academicError) {
+            console.error("Error checking academic data:", academicError);
+            setHasAcademicData(false);
+          }
         }
 
         await getElections(token);
@@ -137,7 +189,11 @@ export default function Home() {
       });
 
       if (response.status === 200) {
-        setPosts(response.data.facultyPosts);
+        // Merge general and faculty elections
+        const facultyPosts = response.data.facultyPosts || [];
+        const generalPosts = response.data.posts || [];
+        const allElections = [...generalPosts, ...facultyPosts];
+        setPosts(allElections);
       } else {
         throw new Error("Failed to fetch the news data");
       }
@@ -170,31 +226,111 @@ export default function Home() {
   // console.log(user);
   console.log("User ID:", user?.userid);
 
-  const ElectionCard = ({ title, duration, status, onPress }) => (
-    <TouchableOpacity onPress={onPress} style={styles.electionCard}>
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{title}</Text>
-          <LinearGradient
-            colors={[COLORS.primary.light, COLORS.primary.default]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.statusBadge}
-          >
-            <Text style={styles.statusText}>{status}</Text>
-          </LinearGradient>
+  // Helper to get election type label and color
+  const getElectionType = (election) => {
+    if (election.faculty_id === 2500 || election.faculty_name === "General") {
+      return { label: "General", color: COLORS.primary.default };
+    }
+    return {
+      label: election.faculty_name || "Faculty",
+      color: COLORS.secondary.default,
+    };
+  };
+
+  // Helper to get status badge color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "ongoing":
+        return "#10B981"; // green
+      case "upcoming":
+        return "#F59E0B"; // orange
+      case "ended":
+        return "#6B7280"; // gray
+      default:
+        return COLORS.primary.default;
+    }
+  };
+
+  const ElectionCard = ({
+    title,
+    duration,
+    status,
+    election_id,
+    faculty_name,
+    faculty_id,
+    start_date,
+  }) => {
+    const { label: typeLabel, color: typeColor } = getElectionType({
+      faculty_id,
+      faculty_name,
+    });
+    const handleElectionPress = () => {
+      if (status === "ongoing") {
+        router.push({
+          pathname: `/(election)/${election_id}/indexx`,
+          params: { electionId: election_id },
+        });
+      } else if (status === "ended") {
+        router.push({
+          pathname: `/(election)/${election_id}/ended`,
+          params: { electionId: election_id },
+        });
+      } else {
+        router.push({
+          pathname: `/(election)/${election_id}/upcoming`,
+          params: { electionId: election_id },
+        });
+      }
+    };
+    return (
+      <TouchableOpacity
+        onPress={handleElectionPress}
+        style={styles.electionCard}
+      >
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{title}</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusColor(status) },
+              ]}
+            >
+              <Text style={styles.statusText}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.cardMetaRow}>
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={COLORS.neutral.gray[600]}
+            />
+            <Text style={styles.duration}>
+              {start_date
+                ? new Date(start_date.replace(" ", "T")).toLocaleDateString()
+                : duration}
+            </Text>
+            <View
+              style={[styles.typeBadge, { backgroundColor: typeColor + "22" }]}
+            >
+              <Ionicons
+                name={
+                  typeLabel === "General" ? "globe-outline" : "school-outline"
+                }
+                size={14}
+                color={typeColor}
+              />
+              <Text style={[styles.typeBadgeText, { color: typeColor }]}>
+                {typeLabel}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.dateContainer}>
-          <Ionicons
-            name="calendar-outline"
-            size={16}
-            color={COLORS.neutral.gray[600]}
-          />
-          <Text style={styles.duration}>{duration}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const SectionHeader = ({ title, onSeeMore }) => (
     <View style={styles.sectionHeader}>
@@ -386,6 +522,63 @@ export default function Home() {
     );
   };
 
+  const handleProfilePress = () => {
+    if (user.profile_id) {
+      setShowImageModal(true);
+    } else {
+      router.push("(election)/123/face");
+    }
+  };
+
+  const renderImageModal = () => (
+    <Modal
+      visible={showImageModal}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowImageModal(false)}
+      statusBarTranslucent
+    >
+      <View style={[styles.modalOverlay, { paddingTop: insets.top }]}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity
+            style={styles.closeIconButton}
+            onPress={() => setShowImageModal(false)}
+          >
+            <Ionicons name="close" size={28} color={COLORS.neutral.white} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.modalContent}>
+          <Image
+            source={{ uri: user.profile_id }}
+            style={styles.modalImage}
+            resizeMode="contain"
+          />
+        </View>
+        <View
+          style={[
+            styles.modalFooter,
+            { paddingBottom: insets.bottom + SPACING.lg },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.modalButton}
+            onPress={() => {
+              setShowImageModal(false);
+              router.push("/(kyc)/upload");
+            }}
+          >
+            <Ionicons
+              name="create-outline"
+              size={24}
+              color={COLORS.neutral.white}
+            />
+            <Text style={styles.modalButtonText}>Edit Profile Picture</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -408,28 +601,27 @@ export default function Home() {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.profileSection}>
-            <TouchableOpacity
-              onPress={() => router.push("/(election)/123/face")}
-            >
+            <TouchableOpacity onPress={handleProfilePress}>
               <Image
                 source={user.profile_id ? { uri: user.profile_id } : image}
                 style={styles.profileImage}
                 defaultSource={image}
               />
-              <View style={styles.editOverlay}>
-                <Ionicons
-                  name="camera"
-                  size={20}
-                  color={COLORS.neutral.white}
-                />
-              </View>
+              {user.role === "admin" && (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield-checkmark" size={16} color="#fff" />
+                </View>
+              )}
             </TouchableOpacity>
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeText}>Welcome back,</Text>
               <Text style={styles.username}>{capitalize(user.username)}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push("/election/123/face")}
+          >
             <Ionicons
               name="notifications-outline"
               size={24}
@@ -440,7 +632,10 @@ export default function Home() {
 
         {/* KYC Banner */}
         {!kycVerified && (
-          <TouchableOpacity onPress={handleKYCRedirect}>
+          <TouchableOpacity
+            onPress={handleKYCRedirect}
+            style={styles.kycBannerWrapper}
+          >
             <LinearGradient
               colors={[COLORS.primary.light, COLORS.primary.default]}
               start={{ x: 0, y: 0 }}
@@ -454,11 +649,17 @@ export default function Home() {
                     Verify your identity to start voting
                   </Text>
                 </View>
-                <Ionicons
-                  name="arrow-forward-circle"
-                  size={32}
-                  color={COLORS.neutral.white}
-                />
+                <TouchableOpacity
+                  style={styles.kycButton}
+                  onPress={handleKYCRedirect}
+                >
+                  <Ionicons
+                    name="checkmark-done-circle"
+                    size={28}
+                    color={COLORS.primary.default}
+                  />
+                  <Text style={styles.kycButtonText}>Start KYC</Text>
+                </TouchableOpacity>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -467,18 +668,8 @@ export default function Home() {
         {/* Elections Sections */}
         {kycVerified ? (
           <>
-            <SectionHeader
-              title="Ongoing Elections"
-              onSeeMore={
-                Object.values(posts).filter(
-                  (election) =>
-                    election.status === "ongoing" ||
-                    election.status === "upcoming"
-                ).length > 2
-                  ? () => router.push("/news")
-                  : null
-              }
-            />
+            {/* Ongoing/Upcoming Elections Section */}
+            <SectionHeader title="Ongoing/Upcoming Elections" />
             <View style={styles.electionsContainer}>
               {Object.values(posts).filter(
                 (election) =>
@@ -491,22 +682,16 @@ export default function Home() {
                       election.status === "ongoing" ||
                       election.status === "upcoming"
                   )
-                  .slice(0, 2)
                   .map((election, index) => (
                     <ElectionCard
-                      key={`ongoing-${election.election_id || index}`}
+                      key={`active-${election.election_id || index}`}
                       title={election.election_name || "Election Title"}
-                      duration={
-                        election.created_at
-                          ? new Date(
-                              election.created_at.replace(" ", "T")
-                            ).toLocaleDateString()
-                          : ""
-                      }
+                      duration={election.duration}
                       status={election.status}
-                      onPress={() =>
-                        router.push(`/(election)/${election.election_id}`)
-                      }
+                      election_id={election.election_id}
+                      faculty_name={election.faculty_name}
+                      faculty_id={election.faculty_id}
+                      start_date={election.start_date}
                     />
                   ))
               ) : (
@@ -519,45 +704,27 @@ export default function Home() {
                   <Text style={styles.emptyStateText}>
                     No active or upcoming elections
                   </Text>
-                  <Text style={styles.emptyStateSubText}>
-                    New elections will appear here when available
-                  </Text>
                 </View>
               )}
             </View>
-
-            <SectionHeader
-              title="Recent Elections"
-              onSeeMore={
-                Object.values(posts).filter(
-                  (election) => election.status === "ended"
-                ).length > 2
-                  ? () => router.push("/news")
-                  : null
-              }
-            />
+            {/* Recent Elections Section */}
+            <SectionHeader title="Recent Elections" />
             <View style={styles.electionsContainer}>
               {Object.values(posts).filter(
                 (election) => election.status === "ended"
               ).length > 0 ? (
                 Object.values(posts)
                   .filter((election) => election.status === "ended")
-                  .slice(0, 2)
                   .map((election, index) => (
                     <ElectionCard
                       key={`ended-${election.election_id || index}`}
                       title={election.election_name || "Election Title"}
-                      duration={
-                        election.created_at
-                          ? new Date(
-                              election.created_at.replace(" ", "T")
-                            ).toLocaleDateString()
-                          : ""
-                      }
+                      duration={election.duration}
                       status={election.status}
-                      onPress={() =>
-                        router.push(`/(election)/${election.election_id}`)
-                      }
+                      election_id={election.election_id}
+                      faculty_name={election.faculty_name}
+                      faculty_id={election.faculty_id}
+                      start_date={election.start_date}
                     />
                   ))
               ) : (
@@ -569,9 +736,6 @@ export default function Home() {
                   />
                   <Text style={styles.emptyStateText}>
                     No completed elections yet
-                  </Text>
-                  <Text style={styles.emptyStateSubText}>
-                    Past elections will appear here once they are completed
                   </Text>
                 </View>
               )}
@@ -591,6 +755,7 @@ export default function Home() {
         )}
       </ScrollView>
       {renderAdminMenu()}
+      {renderImageModal()}
     </SafeAreaView>
   );
 }
@@ -872,5 +1037,96 @@ const styles = StyleSheet.create({
     color: COLORS.neutral.gray[500],
     marginTop: SPACING.xs,
     textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "space-between",
+  },
+  modalHeader: {
+    paddingHorizontal: SPACING.lg,
+    alignItems: "flex-end",
+  },
+  closeIconButton: {
+    padding: SPACING.sm,
+  },
+  modalContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+  },
+  modalImage: {
+    width: "100%",
+    height: "80%",
+    borderRadius: BORDER_RADIUS.lg,
+  },
+  modalFooter: {
+    padding: SPACING.lg,
+  },
+  modalButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary.default,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    gap: SPACING.sm,
+    ...SHADOWS.md,
+  },
+  modalButtonText: {
+    color: COLORS.neutral.white,
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+  adminBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    backgroundColor: COLORS.primary.default,
+    borderRadius: 10,
+    padding: 2,
+    zIndex: 2,
+  },
+  cardMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  typeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    marginLeft: 4,
+  },
+  kycBannerWrapper: {
+    margin: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: "hidden",
+    ...SHADOWS.md,
+  },
+  kycButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 16,
+    ...SHADOWS.sm,
+  },
+  kycButtonText: {
+    color: COLORS.primary.default,
+    fontWeight: "bold",
+    fontSize: 16,
+    marginLeft: 8,
   },
 });

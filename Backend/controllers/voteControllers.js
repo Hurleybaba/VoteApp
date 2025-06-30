@@ -19,6 +19,23 @@ export const checkVoteStatus = async (req, res) => {
         .json({ message: "Bad Request: Election ID required" });
     }
 
+    // Check if user is an admin
+    const [userResult] = await pool.query(
+      `SELECT role FROM users WHERE userid = ?`,
+      [userId]
+    );
+
+    if (userResult.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (userResult[0].role === "admin") {
+      return res.status(403).json({
+        message: "Admins are not allowed to vote in elections",
+        isAdmin: true,
+      });
+    }
+
     // Check if the user has already voted in this election
     const [existingVote] = await pool.query(
       `SELECT vote_id FROM votes WHERE voter_id = ? AND election_id = ? LIMIT 1`,
@@ -193,27 +210,20 @@ export const getVoteDetails = async (req, res) => {
     // Fetch vote details
     const [voteDetails] = await pool.query(
       `SELECT
-    v.vote_id,
-    v.voted_at,
-    v.ref_no,
-
-    -- Voter details
-    u.first_name AS voter_first_name,
-    u.last_name AS voter_last_name,
-
-    -- Candidate details
-    c.first_name AS candidate_first_name,
-    c.last_name AS candidate_last_name,
-
-    -- Election title
-    e.title AS election_title
-
-FROM votes v
-JOIN users u ON v.voter_id = u.userid
-JOIN users c ON v.candidate_id = c.userid
-JOIN elections e ON v.election_id = e.election_id
-
-WHERE v.election_id = ? AND v.voter_id = ?`,
+        v.vote_id,
+        v.voted_at,
+        v.ref_no,
+        voter.first_name AS voter_first_name,
+        voter.last_name AS voter_last_name,
+        candidate.first_name AS candidate_first_name,
+        candidate.last_name AS candidate_last_name,
+        e.election_name AS election_title
+      FROM votes v
+      JOIN users voter ON v.voter_id = voter.userid
+      JOIN users candidate ON v.candidate_id = candidate.userid
+      JOIN elections e ON v.election_id = e.election_id
+      WHERE v.election_id = ? AND v.voter_id = ?
+      LIMIT 1`,
       [electionId, userId]
     );
 
@@ -251,7 +261,7 @@ export const sendVoteReceipt = async (req, res) => {
         voter.email as voter_email,
         candidate.first_name as candidate_first_name,
         candidate.last_name as candidate_last_name,
-        e.title as election_title
+        e.election_name as election_title
       FROM votes v
       JOIN users voter ON v.voter_id = voter.userid
       JOIN users candidate ON v.candidate_id = candidate.userid

@@ -164,7 +164,7 @@ export default function signup() {
               onPress={() => setShowPassword(!showPassword)}
             >
               <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
                 size={24}
                 color="#6B7280"
               />
@@ -187,7 +187,7 @@ export default function signup() {
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
             >
               <Ionicons
-                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
                 size={24}
                 color="#6B7280"
               />
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: "absolute",
     right: 16,
-    top: "50%",
+    top: 40,
     zIndex: 1,
   },
   popupContainer: {

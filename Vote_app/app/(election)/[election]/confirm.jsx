@@ -30,82 +30,6 @@ export default function electionId() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // const getSpecificCandidate = async () => {
-  //   setIsLoading(true);
-  //   setError(null);
-
-  //   try {
-  //     const token = await AsyncStorage.getItem("token");
-
-  //     if (!token) {
-  //       router.replace("/index2");
-  //       return;
-  //     }
-
-  //     const response = await axios.get(
-  //       `${baseUrl}/api/candidate/${candidateId}`,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           "Cache-Control": "no-cache",
-  //           "X-Election-ID": electionId,
-  //         },
-  //         timeout: 15000,
-  //       }
-  //     );
-
-  //     if (response.status === 200) {
-  //       setUser(response.data.user);
-  //       setCandidate(response.data.candidate);
-  //     } else {
-  //       throw new Error("Failed to fetch user/news data");
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed error:", error);
-  //     setError(error.message);
-
-  //     // Clear invalid token and redirect
-  //     if (error.response?.status === 401 || error.response?.status === 403) {
-  //       await AsyncStorage.removeItem("token");
-  //       router.replace("/index2");
-  //     }
-  //   } finally {
-  //     setIsLoading(false);
-  //     setRefreshing(false);
-  //   }
-  // };
-
-  // const onRefresh = () => {
-  //   setRefreshing(true);
-  //   getSpecificCandidate();
-  // };
-
-  // useEffect(() => {
-  //   getSpecificCandidate();
-  // }, []);
-
-  // if (isLoading || !user) {
-  //   return (
-  //     <SafeAreaView style={styles.loadingContainer}>
-  //       <ActivityIndicator size="large" color="#E8612D" />
-  //     </SafeAreaView>
-  //   );
-  // }
-
-  // if (error) {
-  //   return (
-  //     <SafeAreaView style={styles.errorContainer}>
-  //       <Text style={styles.errorText}>{error}</Text>
-  //       <TouchableOpacity
-  //         onPress={getSpecificCandidate}
-  //         style={styles.retryButton}
-  //       >
-  //         <Text style={styles.retryText}>Try Again</Text>
-  //       </TouchableOpacity>
-  //     </SafeAreaView>
-  //   );
-  // }
-
   const getCandidate = async () => {
     try {
       setIsLoading(true);
@@ -154,7 +78,7 @@ export default function electionId() {
     );
   }
 
-  console.log(candidate);
+  console.log("CANDIDATE FROM CONFIRM", candidate);
 
   return (
     <SafeAreaView style={{ flex: 1 }}>

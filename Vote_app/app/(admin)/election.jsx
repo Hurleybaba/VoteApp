@@ -26,7 +26,6 @@ export default function Election() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     election_name: "",
-    title: "",
     note: "",
     date: "",
     time: "",
@@ -128,7 +127,6 @@ export default function Election() {
     try {
       if (
         !formData.election_name ||
-        !formData.title ||
         !formData.date ||
         !formData.time ||
         !formData.duration ||
@@ -267,22 +265,6 @@ export default function Election() {
           </View>
 
           <View style={styles.formGroup}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.label}>Title</Text>
-              <Asterisk />
-            </View>
-            <TextInput
-              style={styles.input}
-              value={formData.title}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, title: text }))
-              }
-              placeholder="Enter title"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
             <Text style={styles.label}>Note</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -319,7 +301,7 @@ export default function Election() {
 
           <View style={styles.formGroup}>
             <View style={styles.labelContainer}>
-              <Text style={styles.label}>Start Time</Text>
+              <Text style={styles.label}>Start Time (24 hours format)</Text>
               <Asterisk />
             </View>
             <TextInput
@@ -338,7 +320,7 @@ export default function Election() {
 
           <View style={styles.formGroup}>
             <View style={styles.labelContainer}>
-              <Text style={styles.label}>Duration (hours)</Text>
+              <Text style={styles.label}>Duration (minutes)</Text>
               <Asterisk />
             </View>
             <TextInput
@@ -347,7 +329,7 @@ export default function Election() {
               onChangeText={(text) =>
                 setFormData((prev) => ({ ...prev, duration: text }))
               }
-              placeholder="Enter duration in hours"
+              placeholder="Enter duration in minutes"
               placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
             />
