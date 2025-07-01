@@ -1,9 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Alert } from "react-native";
+import { baseUrl } from "@/app/baseUrl";
 
 const http = axios.create({
-  baseURL: "http://192.168.43.157:3000",
+  baseURL: baseUrl,
   timeout: 50000,
 });
 

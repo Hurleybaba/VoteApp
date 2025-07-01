@@ -25,6 +25,10 @@ app.use("/api/votes", voteRoutes);
 app.use("/api/general", generalRoutes);
 app.use("/api/notification", notificationRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Welcome to the Vote App Backend!");
+})
+
 const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
