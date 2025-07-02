@@ -287,7 +287,7 @@ export default function electionId() {
     } else {
       AsyncStorage.setItem("candidateData", JSON.stringify(candidate));
       router.replace({
-        pathname: `/${electionId}/face/`,
+        pathname: `/${electionId}/otp/`,
         params: {
           electionId: electionId,
           candidateId: candidate.candidate_id,
@@ -471,13 +471,13 @@ export default function electionId() {
             <View style={styles.processImg}>
               <Text style={styles.number}>1</Text>
             </View>
-            <Text style={styles.processText}>ID Validation</Text>
+            <Text style={styles.processText}>Choose Candidate</Text>
           </View>
           <View style={styles.process}>
-            <View style={styles.processImg}>
-              <Text style={styles.number}>2</Text>
+            <View style={styles.processImg2}>
+              <Text style={styles.number2}>2</Text>
             </View>
-            <Text style={styles.processText}>Choose Candidate</Text>
+            <Text style={styles.processText}>OTP Validation</Text>
           </View>
           <View style={styles.process}>
             <View style={styles.processImg2}>

@@ -8,6 +8,7 @@ export default function ElectionFlowLayout() {
       }}
     >
       <Stack.Screen name="index" screenOptions={{ headerShown: false }} />
+
       {/* <Stack.Screen name="profile" screenOptions={{ headerShown: false }} /> */}
     </Stack>
   );

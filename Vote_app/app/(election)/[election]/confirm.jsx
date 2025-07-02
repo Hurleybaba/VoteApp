@@ -100,19 +100,30 @@ export default function electionId() {
         </View>
 
         <View style={styles.processes}>
-          {[
-            "Choose Candidate",
-            "ID Validation",
-            "Facial Recognition",
-            "Confirm Vote",
-          ].map((text, index) => (
-            <View key={index} style={styles.process}>
-              <View style={styles.processImg}>
-                <Text style={styles.number}>{index + 1}</Text>
-              </View>
-              <Text style={styles.processText}>{text}</Text>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>1</Text>
             </View>
-          ))}
+            <Text style={styles.processText}>Choose Candidate</Text>
+          </View>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>2</Text>
+            </View>
+            <Text style={styles.processText}>OTP Verification</Text>
+          </View>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>3</Text>
+            </View>
+            <Text style={styles.processText}>Facial Recognition</Text>
+          </View>
+          <View style={styles.process}>
+            <View style={styles.processImg}>
+              <Text style={styles.number}>4</Text>
+            </View>
+            <Text style={styles.processText}>Confirm Vote</Text>
+          </View>
           <View style={styles.brokenLine} />
         </View>
 
@@ -205,6 +216,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
     elevation: 8,
   },
+  processImg2: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FAB09B",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   processText: {
     fontSize: 12,
     fontWeight: "500",
@@ -214,6 +233,11 @@ const styles = StyleSheet.create({
   number: {
     fontWeight: "700",
     color: "white",
+    fontSize: 16,
+  },
+  number2: {
+    fontWeight: "700",
+    color: "#E8612D",
     fontSize: 16,
   },
   brokenLine: {

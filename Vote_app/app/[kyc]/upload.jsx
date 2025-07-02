@@ -35,14 +35,16 @@ const Upload = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.8,
+        base64: false,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         setImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to pick image");
+      console.log("Gallery picker error:", error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
     }
   };
 
@@ -60,14 +62,17 @@ const Upload = () => {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.8,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: false,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         setImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to take photo");
+      console.log("Camera error:", error);
+      Alert.alert("Error", "Failed to take photo. Please try again.");
     }
   };
 
@@ -84,15 +89,14 @@ const Upload = () => {
       // Create FormData
       const formData = new FormData();
 
-      // Get file name from URI
-      const fileName = image.split("/").pop();
-      const match = /\.(\w+)$/.exec(fileName);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
+      // Generate a proper filename with timestamp
+      const timestamp = Date.now();
+      const fileName = `profile_${timestamp}.jpg`;
 
       formData.append("profile_picture", {
         uri: image,
         name: fileName,
-        type: type,
+        type: "image/jpeg",
       });
 
       const response = await fetch(`${baseUrl}/api/general/upload`, {
@@ -111,7 +115,7 @@ const Upload = () => {
       }
 
       Alert.alert("Success", "Profile picture updated successfully", [
-        { text: "OK", onPress: () => router.back() },
+        { text: "OK", onPress: () => router.replace("/(tabs)/menu") },
       ]);
     } catch (error) {
       console.log("Upload error:", error);

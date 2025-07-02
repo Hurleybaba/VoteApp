@@ -137,12 +137,18 @@ export default function Election() {
       }
 
       if (!isValidDate(formData.date)) {
-        Alert.alert("Error", "Invalid date format. Please use DD-MM-YYYY");
+        Alert.alert(
+          "Invalid Date",
+          "Please ensure:\n• Date format is DD-MM-YYYY (e.g., 25-12-2024)\n• Date is in the future\n• Date is valid (not like 31-02-2024)"
+        );
         return;
       }
 
       if (!isValidTime(formData.time)) {
-        Alert.alert("Error", "Invalid time format. Please use HH:MM");
+        Alert.alert(
+          "Invalid Time",
+          "Please use 24-hour format:\n• HH:MM (e.g., 14:30 for 2:30 PM)\n• Hours: 00-23\n• Minutes: 00-59"
+        );
         return;
       }
 

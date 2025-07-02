@@ -159,7 +159,7 @@ export default function electionId() {
       />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.up}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.replace("(tabs)/news")}>
             <Ionicons name="chevron-back-outline" size={24} color="#e8612d" />
           </TouchableOpacity>
           <Text style={styles.heading}>Vote for Student Representative</Text>
@@ -175,7 +175,7 @@ export default function electionId() {
             <View style={styles.processImg}>
               <Text style={styles.number}>2</Text>
             </View>
-            <Text style={styles.processText}>ID Validation</Text>
+            <Text style={styles.processText}>OTP Verification</Text>
           </View>
           <View style={styles.process}>
             <View style={styles.processImg}>
@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
   },
   number2: {
     fontWeight: "bold",
+    color: "#E8612D",
   },
   brokenLine: {
     borderBottomWidth: 1,

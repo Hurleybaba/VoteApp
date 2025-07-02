@@ -9,6 +9,7 @@ import faceRoutes from "./routes/faceDataRoutes.js";
 import voteRoutes from "./routes/voteRoutes.js";
 import generalRoutes from "./routes/generalRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import { initializeDatabase } from "./database/dbtables.js";
 
 config();
 
@@ -27,10 +28,23 @@ app.use("/api/notification", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to the Vote App Backend!");
-})
+});
 
 const PORT = process.env.PORT;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    console.log("Initializing database...");
+    await initializeDatabase();
+    console.log("Database initialized successfully.");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Error starting server:", error);
+    process.exit(1);
+  }
+};
+
+startServer();
