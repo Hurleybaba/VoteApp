@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import image from "@/assets/images/success.png";
 import axios from "axios";
 import { baseUrl } from "@/app/baseUrl";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function VoteConfirmation() {
   const router = useRouter();
@@ -161,13 +162,29 @@ export default function VoteConfirmation() {
   if (error) {
     return (
       <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.retryText}>Go Back</Text>
-        </TouchableOpacity>
+        <View style={styles.errorCard}>
+          <Ionicons
+            name="alert-circle"
+            size={56}
+            color={COLORS.primary.default}
+            style={styles.errorIcon}
+          />
+          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="refresh"
+              size={20}
+              color={COLORS.neutral.white}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -254,20 +271,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+  errorCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    shadowColor: COLORS.primary.default,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+    minWidth: 300,
+    maxWidth: 400,
+  },
+  errorIcon: {
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.primary.default,
+    marginBottom: 8,
+    textAlign: "center",
+  },
   errorText: {
-    color: COLORS.error,
-    fontSize: 18,
+    color: COLORS.text,
+    fontSize: 16,
     textAlign: "center",
     marginBottom: 20,
   },
   retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.primary.default,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: COLORS.primary.default,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  retryText: {
+  retryButtonText: {
     color: "#fff",
+    fontWeight: "bold",
     fontSize: 16,
   },
   loader: {

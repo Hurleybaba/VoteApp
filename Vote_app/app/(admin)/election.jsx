@@ -111,16 +111,19 @@ export default function Election() {
   const createDateTime = (dateStr, timeStr) => {
     const [day, month, year] = dateStr.split("-").map(Number);
     const [hours, minutes] = timeStr.split(":").map(Number);
-    const date = new Date(year, month - 1, day, hours, minutes);
 
-    // Format for MySQL: YYYY-MM-DD HH:MM:SS
-    const mysqlFormat = `${year}-${month.toString().padStart(2, "0")}-${day
-      .toString()
-      .padStart(2, "0")} ${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:00`;
+    // Create a date in local time
+    const localDate = new Date(year, month - 1, day, hours, minutes);
 
-    return mysqlFormat;
+    // Convert to UTC components
+    const utcYear = localDate.getUTCFullYear();
+    const utcMonth = (localDate.getUTCMonth() + 1).toString().padStart(2, "0");
+    const utcDay = localDate.getUTCDate().toString().padStart(2, "0");
+    const utcHours = localDate.getUTCHours().toString().padStart(2, "0");
+    const utcMinutes = localDate.getUTCMinutes().toString().padStart(2, "0");
+
+    // Format for MySQL: YYYY-MM-DD HH:MM:SS (in UTC)
+    return `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}:00`;
   };
 
   const handleSubmit = async () => {

@@ -286,6 +286,7 @@ export default function electionId() {
       showDialog();
     } else {
       AsyncStorage.setItem("candidateData", JSON.stringify(candidate));
+      AsyncStorage.setItem("userData", JSON.stringify(user))
       router.replace({
         pathname: `/${electionId}/otp/`,
         params: {

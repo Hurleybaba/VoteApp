@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
     // borderRadius: 4,
     fontSize: 16,
     paddingVertical: 8,
+    color: "#222",
     // marginTop: 5,
   },
   inputError: {

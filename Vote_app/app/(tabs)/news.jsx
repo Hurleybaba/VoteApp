@@ -203,13 +203,29 @@ export default function News() {
   if (error) {
     return (
       <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          onPress={checkLoginStatusAndFetchUser}
-          style={styles.retryButton}
-        >
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
+        <View style={styles.errorCard}>
+          <Ionicons
+            name="alert-circle"
+            size={56}
+            color={COLORS.primary.default}
+            style={styles.errorIcon}
+          />
+          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            onPress={checkLoginStatusAndFetchUser}
+            style={styles.retryButton}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="refresh"
+              size={20}
+              color={COLORS.neutral.white}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -465,17 +481,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: SPACING.lg,
   },
+  errorCard: {
+    backgroundColor: COLORS.neutral.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 32,
+    alignItems: "center",
+    shadowColor: COLORS.primary.default,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+    minWidth: 300,
+    maxWidth: 400,
+  },
+  errorIcon: {
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.primary.default,
+    marginBottom: 8,
+    textAlign: "center",
+  },
   errorText: {
-    color: COLORS.feedback.error,
+    color: COLORS.neutral.gray[600],
     marginBottom: SPACING.md,
   },
   retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.primary.default,
-    padding: SPACING.md,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: BORDER_RADIUS.full,
+    shadowColor: COLORS.primary.default,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  retryText: {
+  retryButtonText: {
     color: COLORS.neutral.white,
-    fontWeight: TYPOGRAPHY.weights.semibold,
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

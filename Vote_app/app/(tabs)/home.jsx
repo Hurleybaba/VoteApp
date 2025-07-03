@@ -358,13 +358,29 @@ export default function Home() {
   if (error) {
     return (
       <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          onPress={checkLoginStatusAndFetchUser}
-          style={styles.retryButton}
-        >
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
+        <View style={styles.errorCard}>
+          <Ionicons
+            name="alert-circle"
+            size={56}
+            color={COLORS.primary.default}
+            style={styles.errorIcon}
+          />
+          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            onPress={checkLoginStatusAndFetchUser}
+            style={styles.retryButton}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="refresh"
+              size={20}
+              color={COLORS.neutral.white}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -523,11 +539,7 @@ export default function Home() {
   };
 
   const handleProfilePress = () => {
-    if (user.profile_id) {
-      setShowImageModal(true);
-    } else {
-      router.push("(election)/123/face");
-    }
+    setShowImageModal(true);
   };
 
   const renderImageModal = () => (
@@ -548,11 +560,19 @@ export default function Home() {
           </TouchableOpacity>
         </View>
         <View style={styles.modalContent}>
-          <Image
-            source={{ uri: user.profile_id }}
-            style={styles.modalImage}
-            resizeMode="contain"
-          />
+          {user.profile_id ? (
+            <Image
+              source={{ uri: user.profile_id }}
+              style={styles.modalImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <Image
+              source={image}
+              style={styles.modalImage}
+              resizeMode="contain"
+            />
+          )}
         </View>
         <View
           style={[
@@ -814,13 +834,13 @@ const styles = StyleSheet.create({
     margin: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     overflow: "hidden",
-    ...SHADOWS.md,
   },
   kycContent: {
     padding: SPACING.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: SPACING.md,
   },
   kycTitle: {
     fontSize: TYPOGRAPHY.sizes.lg,
@@ -1105,25 +1125,26 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   kycBannerWrapper: {
-    margin: SPACING.md,
+    // margin: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     overflow: "hidden",
-    ...SHADOWS.md,
   },
   kycButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.neutral.white,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginLeft: 16,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginLeft: 20,
+    minWidth: 56,
+    minHeight: 44,
     ...SHADOWS.sm,
   },
   kycButtonText: {
     color: COLORS.primary.default,
     fontWeight: "bold",
     fontSize: 16,
-    marginLeft: 8,
+    marginLeft: 10,
   },
 });

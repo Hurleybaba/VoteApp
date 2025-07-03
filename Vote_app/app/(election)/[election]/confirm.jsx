@@ -58,7 +58,8 @@ export default function electionId() {
 
   const removeCandidateData = async () => {
     await AsyncStorage.removeItem("candidateData");
-    router.back();
+    await AsyncStorage.removeItem("userData");
+    router.replace("/(tabs)/news");
   };
 
   useEffect(() => {
@@ -147,7 +148,9 @@ export default function electionId() {
             text="CONFIRM VOTE"
             buttonStyle={styles.confirmButton}
             textStyle={styles.confirmText}
-            handlePress={() => {
+            handlePress={async () => {
+              await AsyncStorage.removeItem("candidateData");
+              await AsyncStorage.removeItem("userData");
               router.replace({
                 pathname: `/${electionId}/success/`,
                 params: {

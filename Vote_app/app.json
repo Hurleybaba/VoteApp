@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "iElect",
-    "slug": "iElect",
+    "slug": "ielect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo4.png",
@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hurleybaba.iElect"
@@ -28,7 +30,7 @@
       "package": "com.hurleybaba.iElect"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icons/logo.png"
     },
     "plugins": [
       [
@@ -36,14 +38,20 @@
         {
           "icon": "./assets/images/logo2.png",
           "color": "#ffffff",
-          "sounds": ["./assets/images/notification.wav"]
+          "sounds": [
+            "./assets/images/notification.wav"
+          ]
         }
-      ]
+      ],
+      "expo-font",
+      "expo-router",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
-        "projectId": "c289276f-26ab-4500-adb9-e8ba177262db"
+        "projectId": "adcaf31d-39eb-4a3a-a839-01375358e1d1"
       }
-    }
+    },
+    "owner": "hurleybaba"
   }
 }

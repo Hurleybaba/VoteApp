@@ -36,6 +36,7 @@ const OtpScreen = () => {
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [candidateData, setCandidateData] = useState(null);
+  const [userData, setUserData] = useState(null);
 
   const inputRefs = useRef([]);
 
@@ -60,6 +61,7 @@ const OtpScreen = () => {
       if (data) {
         setCandidateData(JSON.parse(data));
       }
+      setUserData(() => AsyncStorage.getItem("userData"));
     } catch (error) {
       console.log("Error getting candidate data:", error);
     }
@@ -73,7 +75,7 @@ const OtpScreen = () => {
       const response = await axios.post(
         `${baseUrl}/api/auth/sendEmail`,
         {
-          email: candidateData?.email || "user@example.com", // You might need to get user email from storage
+          email: userData?.email,
         },
         {
           headers: {
@@ -141,7 +143,7 @@ const OtpScreen = () => {
       const response = await axios.post(
         `${baseUrl}/api/auth/verifyOtp`,
         {
-          email: candidateData?.email || "user@example.com",
+          email: userData?.email,
           otp: otpCode,
         },
         {
@@ -247,7 +249,7 @@ const OtpScreen = () => {
 
             <Text style={styles.heading}>Verify Your Identity</Text>
             <Text style={styles.subheading}>
-              We've sent a 6-digit verification code to your email address
+              {`We've sent a 6-digit verification code to this email address: ${userData?.email}`}
             </Text>
 
             {candidateData && (

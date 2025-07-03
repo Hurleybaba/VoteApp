@@ -77,7 +77,7 @@ export default function login() {
       if (response.status === 200) {
         const { token } = response.data;
         await AsyncStorage.setItem("token", token);
-        router.push("/(tabs)/home");
+        router.replace("/(tabs)/home");
       }
     } catch (err) {
       Alert.alert(

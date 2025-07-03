@@ -6,9 +6,9 @@ export const initializeDatabase = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
       userid char(12) NOT NULL,
-      first_name varchar(20) NOT NULL,
-      middle_name varchar(20) NOT NULL,
-      last_name varchar(20) NOT NULL,
+      first_name varchar(40) NOT NULL,
+      middle_name varchar(40) NOT NULL,
+      last_name varchar(40) NOT NULL,
       username varchar(50) NOT NULL,
       age int NOT NULL,
       email varchar(100) NOT NULL,
